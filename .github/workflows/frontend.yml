@@ -16,44 +16,52 @@ concurrency:
 
 jobs:
   lint:
-    if: hashFiles('frontend/package.json') != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+        if: hashFiles('frontend/package.json') != ''
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
+        if: hashFiles('frontend/package.json') != ''
         working-directory: frontend
       - run: bun run lint
+        if: hashFiles('frontend/package.json') != ''
         working-directory: frontend
       - run: bun run format:check
+        if: hashFiles('frontend/package.json') != ''
         working-directory: frontend
       - run: bunx tsc --noEmit
+        if: hashFiles('frontend/package.json') != ''
         working-directory: frontend
 
   test:
-    if: hashFiles('frontend/package.json') != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+        if: hashFiles('frontend/package.json') != ''
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
+        if: hashFiles('frontend/package.json') != ''
         working-directory: frontend
       - run: bun test
+        if: hashFiles('frontend/package.json') != ''
         working-directory: frontend
 
   build:
-    if: hashFiles('frontend/package.json') != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+        if: hashFiles('frontend/package.json') != ''
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
+        if: hashFiles('frontend/package.json') != ''
         working-directory: frontend
       - run: bun run build
+        if: hashFiles('frontend/package.json') != ''
         working-directory: frontend

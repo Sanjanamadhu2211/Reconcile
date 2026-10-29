@@ -72,17 +72,17 @@ The product imports data from multiple sources, matches related records using co
 
 Keep the system simple and deployable without a large infrastructure footprint.
 
-- **Frontend:** Next.js + TypeScript
+- **Frontend:** Next.js + TypeScript, with Bun as package manager, script runner, and unit test runner (`bun.lock`, `bun test`)
 - **Backend API:** Python + FastAPI
 - **ORM and migrations:** SQLAlchemy + Alembic
 - **Database:** PostgreSQL
 - **Validation:** FastAPI's built-in request validation and Pydantic models.
-- **Unit/integration tests:** Pytest
-- **Browser tests:** Playwright
+- **Unit/integration tests:** Pytest for `backend/`, `bun test` for `frontend/`; two independent suites
+- **Browser tests:** Playwright (run through `bunx`)
 - **Local infrastructure:** Docker Compose
 - **CI/CD:** GitHub Actions
 - **Deployment:** Docker-compatible app hosting plus managed PostgreSQL
-- **Observability:** structured JSON logs with request IDs, a health endpoint, and Sentry error tracking.
+- **Observability:** structured JSON logs with request IDs and a health endpoint. Errors are read from the Render and Vercel log viewers; there is no Sentry.
 
 Use a modular monolith: API and web are separate processes from the same codebase (no worker process). Do not introduce microservices for the MVP.
 
@@ -95,7 +95,7 @@ Use a modular monolith: API and web are separate processes from the same codebas
 - DB-enforced append-only audit: the application DB role has only INSERT and SELECT on `audit_events`, plus a trigger that raises on UPDATE or DELETE.
 - Session cookie auth with CSRF: email/password OR Google sign-in, server-side PostgreSQL `sessions` table, HttpOnly Secure SameSite=Lax cookie, double-submit `X-CSRF-Token`.
 - Two-step resolution: exception state machine open → proposed → resolved/open, with an optimistic version column (stale updates return 409).
-- Split domains for deployment: frontend on Vercel at `app.<domain>`, API on Render at `api.<domain>`, cookie Domain on the parent domain, CORS limited to the exact web origin with credentials; uploads go from the browser directly to the API origin.
+- Same-origin deployment through a Vercel rewrite: no custom domain. The frontend is served from its automatic `<project>.vercel.app` address and a rewrite forwards `/api/*` to the backend on Render, so the browser only talks to one origin. The session cookie is host-only (no `Domain` attribute) and no CORS is needed; uploads go through the same rewrite.
 
 ADRs to create under `docs/adr/` (one per bullet above):
 
@@ -106,17 +106,18 @@ ADRs to create under `docs/adr/` (one per bullet above):
 - `0005-append-only-audit.md`
 - `0006-session-cookie-auth-with-csrf.md`
 - `0007-two-step-resolution.md`
-- `0008-split-domains-for-deployment.md`
+- `0008-same-origin-deployment-via-rewrite.md`
 - `0009-google-sign-in-plus-password-login.md`
 
 ## 6. Proposed Repository Structure
 
 ```text
 reconcile/
-├── web/                      # Next.js + TypeScript dashboard
-│   ├── src/lib/api/          # Typed client (openapi-typescript + openapi-fetch) generated from /openapi.json via npm script
+├── frontend/                 # Next.js + TypeScript dashboard
+│   ├── src/lib/api/          # Typed client (openapi-typescript + openapi-fetch) generated via `bun run gen:api` from the committed `backend/openapi.json`
+│   ├── .env.example
 │   └── e2e/                  # Playwright E2E tests (exactly 3 flows)
-├── api/                      # Python + FastAPI REST API
+├── backend/                  # Python + FastAPI REST API
 │   ├── app/
 │   │   ├── routers/          # HTTP endpoints
 │   │   ├── models/           # SQLAlchemy models
@@ -127,6 +128,7 @@ reconcile/
 │   ├── alembic.ini
 │   ├── alembic/              # Migrations
 │   ├── Dockerfile
+│   ├── .env.example
 │   ├── scripts/              # seed_demo.py, benchmark.py
 │   ├── tests/                # Pytest suites and fixtures
 │   └── pyproject.toml
@@ -137,7 +139,6 @@ reconcile/
 │   └── adr/                  # one ADR per Key Design Decisions bullet
 ├── .github/workflows/
 ├── docker-compose.yml
-├── .env.example
 └── README.md                 # incl. setup, architecture, demo instructions, free-tier cold-start note
 ```
 
@@ -275,11 +276,11 @@ Start with deterministic, explainable rules. Every match carries the `rule` that
 - Scopes: `openid email profile` only, which need no Google app verification.
 - Verify the ID token (signature, issuer, audience, expiry) and require `email_verified` to be true.
 - Account linking: look up the user by Google `sub` first; otherwise link to an existing user with the same verified email; otherwise create a new user. A new Google user has no organization until they create one or are invited. Never link by an unverified email.
-- Register the redirect URI separately for local and staging (and production if used) in Google Cloud Console. The OAuth consent screen uses the External user type.
+- Register the redirect URI separately for local and the stable Vercel address (`https://<project>.vercel.app/api/v1/auth/google/callback`, proxied to the backend). Preview deployment URLs change on every deploy, so Google sign-in works only on the stable address; previews use the demo login. The OAuth consent screen uses the External user type.
 
 ### Environment variables
 
-See `.env.example`: `DATABASE_URL`, `DATABASE_DIRECT_URL`, `SESSION_SECRET`, `CORS_ORIGIN`, `COOKIE_DOMAIN`, `SENTRY_DSN`, `MAX_UPLOAD_MB`, `MAX_IMPORT_ROWS`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`.
+See `backend/.env.example` (the frontend folder has its own `frontend/.env.example` with the API base URL). Only `DATABASE_URL` and `SESSION_SECRET` are required; the rest are optional and off when empty: `DATABASE_URL`, `DATABASE_DIRECT_URL`, `SESSION_SECRET`, `WEB_ORIGIN`, `MAX_UPLOAD_MB`, `MAX_IMPORT_ROWS`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`.
 
 ## 11. Testing Strategy
 
@@ -319,23 +320,24 @@ Note: Playwright flows keep using the seeded email-and-password demo login; the 
 - Production build.
 - Dependency and secret scanning.
 - OpenAPI client drift check (CI fails if the generated client is out of date).
+- Separate suites: `backend/tests` (Pytest, `unit/` and `integration/`) and `frontend/src/**/*.test.ts(x)` (`bun test`). Each runs in its own CI job, and only when its folder changes.
 - E2E smoke suite against staging.
 - Test the failure paths, not only the happy path.
-- The performance suite is one benchmark script, `api/scripts/benchmark.py`, which seeds 10k to 100k synthetic rows with a known match/exception ratio and records rows per second and match accuracy in the README.
+- The performance suite is one benchmark script, `backend/scripts/benchmark.py`, which seeds 10k to 100k synthetic rows with a known match/exception ratio and records rows per second and match accuracy in the README.
 
 ## 12. CI/CD and Deployment
 
-### Pull request workflow
+### CI workflow (push to `dev` and `main`)
 
-1. Install dependencies from the lockfile and pyproject.toml.
-2. Run formatting/lint checks and type checks (Ruff, Pytest with coverage, ESLint, `tsc`).
-3. Run unit tests.
-4. Start disposable PostgreSQL service for integration tests.
-5. Run migrations and integration tests.
-6. Build all deployable applications.
-7. Run the OpenAPI client drift check (CI fails if the generated client is out of date).
-8. Run dependency and secret scanning (pip-audit, gitleaks).
-9. Require checks to pass before merge.
+Separate workflow files so the two sides run in parallel and only when their folder changes (`paths:` filters, each including its own workflow file):
+
+- `backend.yml` (on `backend/**`): jobs `lint` (Ruff format and check), `test` (Pytest with coverage against a Postgres service container, migrations applied first), `audit` (pip-audit), `build` (Docker image). The jobs run in parallel.
+- `frontend.yml` (on `frontend/**`): jobs `lint` (ESLint, Prettier check, `tsc`), `test` (`bun test`), `build` (`bun run build`). Dependencies come from `bun install --frozen-lockfile`. The jobs run in parallel.
+- `contract.yml` (on `backend/**` and `frontend/**`): regenerates `backend/openapi.json` and the typed client and fails if either differs from what is committed.
+- `security.yml` (every push): gitleaks.
+- `e2e.yml` (on `backend/**` or `frontend/**`, added in Phase 7): Playwright against a local stack.
+
+CI needs no real secrets or external services. It uses a Postgres service container and fixed dummy values for settings (see 13.1, external connections).
 
 Dependabot is enabled.
 
@@ -352,105 +354,204 @@ Dependabot is enabled.
 
 - Deploy the same tested image to production (Vercel manages its own deployments for the web app; there is no image to promote).
 - Use protected production environments and approval if appropriate.
-- Run backward-compatible migrations before application rollout (`alembic upgrade head` as a pre-deploy step on Render, never at app startup).
+- Run backward-compatible migrations before application rollout (`alembic upgrade head` as a pre-deploy step on Render, or a one-off Cloud Run job, never at app startup).
 - Verify readiness and critical workflows.
 - Maintain a rollback procedure and migration recovery notes.
 - Never assume rolling back application code automatically rolls back a database migration.
 
 ### Operational requirements
 
-- Deployment: frontend on Vercel; API as a Docker container on Render (Cloud Run is a documented equivalent alternative). Database on Neon free tier: pooled URL for the app, direct URL for Alembic.
-- One custom domain: `app.<domain>` for the web app and `api.<domain>` for the API. Cookie Domain is set to the parent domain; CORS allows only the exact web origin with credentials.
-- File uploads go from the browser directly to the API origin, never through Next.js (Vercel limits request bodies to about 4.5 MB).
+- Deployment: frontend on Vercel; API as one host-agnostic Docker image that deploys to either Render or GCP Cloud Run (both are supported and documented; the choice is made at the end, and the Vercel rewrite target is a single `BACKEND_URL` setting). Database on Neon free tier: pooled URL for the app, direct URL for Alembic.
+- No custom domain. The web app is served from its automatic Vercel address (`<project>.vercel.app`) and a Vercel rewrite forwards `/api/*` to the Render API, so the browser sees one origin: the session cookie is host-only and no CORS is needed. The backend trusts forwarded headers from the proxy only.
+- File uploads (max 10 MB) go through the same rewrite. Vercel limits Function request bodies to about 4.5 MB; whether that applies to rewrites to an external origin is unverified and must be tested in Phase 8. If it does apply, fall back to direct browser-to-API uploads with a `SameSite=None; Secure` cookie plus the CSRF token, or lower the web upload cap.
 - Single `/health` endpoint that also checks the database (no separate `/ready`).
-- Structured JSON logs with request IDs; Sentry error tracking and alerts.
+- Structured JSON logs with request IDs, read through the Render and Vercel log viewers. No Sentry or alerting service.
 - Metrics for import duration, rows/second, match rate, exception rate.
 - A documented manual `pg_dump` script plus Neon's built-in history (replaces scheduled backups); tested restore procedure.
 - Separate staging and (optional) production secrets and data.
 - DB pool: SQLAlchemy `pool_size=5`, `max_overflow=5`, `pool_pre_ping=True`; single uvicorn worker.
-- Migrations: run `alembic upgrade head` as a pre-deploy step on Render, never at app startup.
+- Migrations: run the Alembic upgrade as a pre-deploy step on Render or as a Cloud Run job, never at app startup.
 - README note: free tiers cold-start after idle.
 - Note: free-tier limits (Vercel body size, Render request timeout of roughly 100 s) are stated from memory and must be re-checked against current docs before launch.
 
-## 13. Sequential Build Plan
+## 13. Phased Build Plan
 
-### Milestone 0 — Define the contract
+Nine phases (0 to 8). Subagents do the work; the orchestrator plans, dispatches, checks, and reports.
 
-- Write a concise PRD and architecture diagram (Mermaid).
-- Define CSV formats and canonical transaction schema.
-- Create sample datasets containing exact matches, missing records, duplicates, refunds, fees, malformed rows, and ambiguous candidates.
-- Document key invariants and ADRs.
+### 13.1 Delivery rules
 
-**Exit criteria:** Requirements and fixtures make expected reconciliation results unambiguous.
+**Branches**
+- All work lands on `dev`. `main` is never touched.
+- Each subagent slice runs in its own worktree on a branch `dev-p<N>-<slice>` cut from `dev`, and is squash-merged back into `dev` once its gate is green.
+- Nothing is pushed until the user says so. The expected push point is the end of a phase, on `dev` only.
 
-### Milestone 1 — Repository and local environment
+**Checkpoint commits**
+- A checkpoint is one commit on `dev` that leaves the whole tree green. Each phase has 2 to 4 of them, listed under the phase.
+- One checkpoint per integrated slice or slice group. No commit per file, per subagent step, or for WIP. If a slice is small, fold it into the next checkpoint.
+- A checkpoint is only made after its gate passes. A failing gate means fix first, then commit, never commit red.
+- Messages follow the workspace rules: short, plain, human, no `feat:`/`fix:` prefix, no emoji, no attribution lines. Author is `Sanjanamadhu2211`.
+- When a phase passes its exit criteria, tag the last checkpoint `phase-<N>-done` (local tag).
 
-- Initialize the repo with `web/` and `api/`, linting and formatting (Ruff for Python, ESLint and Prettier for the frontend), and Pytest.
-- Add Docker Compose for PostgreSQL.
-- Add configuration validation and `.env.example`.
-- Add a basic health endpoint and CI workflow.
+**Revert path**
+- Every checkpoint and every `phase-<N>-done` tag is a known-good point.
+- Before pushing: reset `dev` to the last good checkpoint (only after the user confirms).
+- After pushing: `git revert <checkpoint>`; history is never rewritten on a pushed branch.
+- A checkpoint that adds a migration holds exactly one Alembic revision with a working `downgrade()`. Reverting it means downgrading one revision, then the git revert. The gate runs upgrade, downgrade, upgrade once to prove it.
 
-**Exit criteria:** A fresh clone can start locally and pass CI.
+**Subagent dispatch**
+- Orchestrator calls `orchestrator_capabilities` once, then hands out slices round robin: MiMo V2.6 Flash, Nemotron 3.5 Super VL, North Mini Code, repeat. A rate-limited model is skipped for that turn and swapped for a backup. Haiku only on escalation (retry once on the same model with the exact failure, then the next model, then Haiku), and the report says when it was used.
+- Max 5 subagents at once. Slices running in parallel own disjoint directories; shared files (`app/main.py` router registration, `pyproject.toml`, `package.json`) are touched by one named slice only, and the rest add their own files.
+- Migrations are never written in parallel. Each phase has a schema step (x.0) done by one agent before the parallel slices start, so there is one Alembic head at all times.
+- Each brief is self-contained: exact paths, goal, interfaces to honour, what must not change, stack, numbered steps, the gate commands, the git rules, and the fixed report format (files changed, commands run with pass/fail, commits, skipped or unsure).
+- Security-sensitive slices (auth, Google OIDC, tenant isolation, audit trigger and grants, money parsing, matching rules) get a second-model review of the diff before their checkpoint.
 
-### Milestone 2 — Identity and tenancy
+**Orchestrator check after each slice** (no code re-reading): `git log --oneline`, `git diff --stat`, then the gate commands. Clean output means accept.
 
-- Implement authentication (email/password, argon2-cffi, PostgreSQL sessions, CSRF) and Google sign-in (OpenID Connect with PKCE, account linking, and sessions in the same table).
-- Add organizations, memberships, and roles (analyst and reviewer only).
-- Implement workspace CRUD and authorization.
-- Add cross-tenant access tests.
+**Gates** (use whatever exists at that phase; CI runs the same commands)
+- API: `cd backend && ruff check . && ruff format --check . && pytest -q`
+- Web: `cd frontend && bun install --frozen-lockfile && bun run lint && bunx tsc --noEmit && bun test && bun run build`
+- Client drift (from Phase 6): regenerate `backend/openapi.json` and run `cd frontend && bun run gen:api`, then `git diff --exit-code`.
+- Migration round trip (any phase with a migration): upgrade to head, downgrade one revision, upgrade to head again.
 
-**Exit criteria:** Users can only access authorized organization data.
+**Tests.** Tests are written together with the code, in the same slice and the same checkpoint, never in a later pass. A slice brief lists the tests it must add, and a slice without them is not accepted. Tests are committed and pushed with the code (this overrides the workspace default for tests only). Docs, including ADRs and the README, stay local and unpushed until the user asks.
 
-### Milestone 3 — Import pipeline
+**CI first.** The CI workflows (section 12) are the very first checkpoint of the build (step 0.0), before any application code. From then on every push to `dev` or `main` runs them in the background, so each checkpoint is checked remotely as well as locally. Until `backend/` and `frontend/` exist, the workflows detect the missing folder and pass without doing anything.
 
-- Implement upload, checksum, column mapping, preview, and validation.
-- Persist import batches and row errors.
-- Process imports synchronously (one HTTP request per file, chunks of 1,000).
-- Add progress and failure reporting using `import_batches.status`; the browser polls `GET /imports/{id}`.
+**Separate deployables.** `backend/` and `frontend/` are fully independent: own dependency lockfile (`pyproject.toml` and `bun.lock`), own `.env.example`, own tests, no imports across the folders. The only link is the committed `backend/openapi.json`, from which `frontend` generates its client. The repo root holds only Compose, CI, and docs, so each folder can be deployed on its own (`backend/Dockerfile` for Render, `frontend/` for Vercel).
 
-**Exit criteria:** Duplicate submission is safe, invalid rows are visible, imports resume from `rows_processed`, and the CLI path handles larger files with no row cap.
+**External connections do not block the build.** Only `DATABASE_URL` and `SESSION_SECRET` are required, and both have local defaults (Compose Postgres, a dev secret). Google, Neon pooling, Render, and Vercel are all optional settings: empty means the feature is off (Google login hidden and its routes return 503). Tests mock Google and never need real credentials. CI uses dummy values. Real values are wired in during Phase 8, supplied by the user at the end.
 
-### Milestone 4 — Matching engine
+**Tasks only the user can do, all at the end (Phase 8):** create the Google Cloud OAuth client, create the Neon and Vercel accounts, plus a Render or GCP account (whichever backend host is used), and projects, provide secrets, record the walkthrough video, and re-check the free-tier limits flagged in section 12.
 
-- Implement canonical normalization and deterministic rules (exact external ID; amount plus currency within tolerance).
-- Add match, unmatched, ambiguous, and exception classifications.
-- Persist rule versions and the `rule` that produced each match.
-- Add reproducibility and concurrency tests.
+### Phase 0 — Define the contract
 
-**Exit criteria:** Fixtures produce deterministic results and reruns do not duplicate outcomes.
+Goal: requirements and fixtures make expected reconciliation results unambiguous.
 
-### Milestone 5 — Review and audit
+Order: 0.0 first, then 0a, then 0b and 0c in parallel.
+- **0.0 CI** (`.github/workflows/`): the five workflows from section 12 with `paths:` filters, triggered on push to `dev` and `main`, plus Dependabot for pip and bun. Guarded so they pass while `backend/` and `frontend/` are absent. Own checkpoint, first of all.
+- **0a Canonical schema and CSV formats** (`docs/data-model.md`): canonical transaction fields, per-source CSV layouts, column mapping rules, key invariants.
+- **0b Fixtures** (`backend/tests/fixtures/`): sample CSVs for orders, payments, refunds, settlements covering exact matches, missing records, duplicates, refunds, fees, malformed rows, ambiguous candidates; each with a committed expected-output file. Fixtures are tests and are committed.
+- **0c Architecture and ADRs** (`docs/architecture.md` with the Mermaid diagram, `docs/security.md` skeleton, `docs/adr/0001` to `0009`).
 
-- Build discrepancy queue, filters, detail pages, and resolution workflow (propose, approve, reject, reopen).
-- Add reviewer actions, optimistic versioning (409 on stale), and append-only audit events.
-- Add the three streaming CSV export endpoints.
+Checkpoints: (1) CI workflows; (2) canonical schema and CSV formats; (3) fixtures and expected outputs; (4) architecture diagram and ADRs.
 
-**Exit criteria:** Every resolution is attributable and explainable.
+Gate: a small script confirms every input row appears in exactly one expected category (no row unaccounted for).
 
-### Milestone 6 — Dashboard and UX
+Exit: expected outcome for every fixture row is written down and unambiguous.
 
-- Build import wizard, batch status, reconciliation summary, and exception views.
-- Add loading, empty, error, and retry states.
-- Add accessible forms and responsive layouts.
+### Phase 1 — Repository and local environment
 
-**Exit criteria:** A new user can complete the end-to-end workflow without developer intervention.
+Goal: a fresh clone starts locally and passes CI.
 
-### Milestone 7 — Production readiness
+Parallel slices (disjoint directories):
+- **1a API skeleton** (`backend/`): `pyproject.toml`, app factory, validated settings, `/health` with DB check, JSON logs with request IDs, Dockerfile, Pytest (`tests/unit`, `tests/integration`) and Ruff setup, DB test fixture, one smoke test per suite.
+- **1b Web skeleton** (`frontend/`): Next.js + TypeScript, Bun (`bun.lock`), ESLint, Prettier, `bun test` with one smoke test, placeholder page.
+- **1c Infra** (repo root, `.github/`): `docker-compose.yml` (PostgreSQL) and the removal of the empty-folder guard from the CI workflows now that both folders exist. Each folder carries its own `.env.example`.
 
-- Add security review, rate limiting, redaction, health checks, metrics, and error tracking (Sentry).
-- Add Playwright E2E tests (exactly three flows).
-- Document backup/restore (manual `pg_dump`, Neon history) and incident response.
+Checkpoints: (1) API skeleton plus Compose; (2) web skeleton; (3) CI guards removed and green on both folders.
 
-**Exit criteria:** Key failure modes have reproducible tests and documented recovery steps.
+Gate: `docker compose up -d`, then API gate and web gate from a clean checkout, and the first CI run is green.
 
-### Milestone 8 — Release pipeline and live deployment
+Exit: fresh clone runs locally, CI config in place.
 
-- Deploy staging (production is optional, only if budget allows).
-- Add protected release workflow; run migrations and smoke tests automatically.
-- Seed a demo organization with `api/scripts/seed_demo.py`; show a demo reviewer login on the staging login page; both the Google sign-in button and demo login are available; reset by running the seed script by hand (no scheduler).
-- Publish architecture (Mermaid diagram), API docs, demo credentials, and a 2-minute walkthrough video.
+### Phase 2 — Identity and tenancy
 
-**Exit criteria:** A code change can move from PR to staging (and controlled production if budget allows) through documented automation.
+Goal: users can only reach their own organization's data.
+
+- **2.0 Schema** (one agent): models and one Alembic revision for `users`, `organizations`, `organization_memberships`, `workspaces`, `sessions`; Alembic on `DATABASE_DIRECT_URL`; engine pool settings. Checkpoint (1).
+- **2a Password auth** (`app/auth/`, `routers/auth.py`): argon2-cffi, PostgreSQL sessions, HttpOnly Secure SameSite=Lax cookie, double-submit CSRF, login rate limit. Checkpoint (2).
+- Then in parallel:
+  - **2b Google sign-in** (`app/auth/google.py`): Authlib OIDC, PKCE, `state`, ID token checks, verified-email linking, reuses 2a's session helper; Pytest with mocked token exchange (valid, unverified email, wrong audience, link by `sub`, link by verified email).
+  - **2c Orgs, roles, workspaces** (`routers/organizations.py`, `routers/workspaces.py`, `app/auth/permissions.py`): create org (creator becomes reviewer), memberships, analyst/reviewer dependency, workspace CRUD scoped by `organization_id`. Checkpoint (3) once both merge.
+- **2d Tenant isolation tests**: cross-tenant denial for every endpoint so far, role matrix; second-model review of the auth diff. Checkpoint (4).
+
+Gate: API gate plus migration round trip.
+
+Exit: cross-tenant access is denied and tested; both login paths create the same session.
+
+### Phase 3 — Import pipeline
+
+Goal: duplicate submission is safe, bad rows are visible, imports resume, the CLI handles big files.
+
+- **3.0 Schema** (one agent): `import_batches` (unique `workspace_id`, `file_checksum`), `import_rows`, `transactions` (unique `workspace_id`, `source_name`, `external_id`), all with non-null indexed `organization_id`.
+- **3a Parse, map, validate** (`app/imports/`): streaming CSV, encoding and size and row caps (10 MB, 50,000), column mapping, `Decimal` money, timestamp and currency normalization. Pure functions. Checkpoint (1) with 3.0.
+- **3b Processor** (`app/imports/processor.py`): checksum, chunks of 1,000 each in its own transaction, `rows_processed` and status updates, resume skipping committed row numbers, stuck-after-5-minutes rule, never discards a row silently. Checkpoint (2).
+- Then in parallel:
+  - **3c Endpoints** (`routers/imports.py`): upload, preview, `GET /imports/{id}`, `/errors`, `Idempotency-Key`.
+  - **3d CLI** (`app/cli.py`): `python -m app.cli import <file>`, same code path, no row cap. Checkpoint (3).
+
+Gate: API gate plus migration round trip. Required tests: crash mid-file then resume, double upload, size and row-cap rejection, golden fixtures for import errors.
+
+Exit: duplicate submission is safe, invalid rows are visible, imports resume from `rows_processed`, and the CLI path handles larger files with no row cap.
+
+### Phase 4 — Matching engine
+
+Goal: fixtures produce deterministic results; reruns never duplicate outcomes.
+
+- **4.0 Schema** (one agent): `reconciliation_runs`, `matches` (unique `reconciliation_run_id`, `transaction_id` per matched column), `exceptions`.
+- **4a Engine** (`app/reconciliation/`): normalization, exact-ID rule, amount plus currency within tolerance, ambiguous classification, documented tie-breaks. Pure and unit-tested. Checkpoint (1) with 4.0.
+- **4b Persistence** (`app/reconciliation/runner.py`): run in one DB transaction, rule version and `rule` stored, rerun replaces its own outputs safely, source transactions never mutated. Checkpoint (2).
+- **4c Endpoints** (`routers/reconciliation.py`): create run, get run, list matches and exceptions with filters, search, and bounded pagination. Checkpoint (3).
+
+Gate: API gate plus migration round trip. Required tests: golden fixtures from Phase 0, rerun idempotency, two concurrent runs, ambiguous never auto-resolved.
+
+Exit: results match the committed expected outputs exactly.
+
+### Phase 5 — Review and audit
+
+Goal: every resolution is attributable and explainable.
+
+- **5.0 Schema** (one agent): `resolutions`, `audit_events`, the UPDATE/DELETE-raising trigger, and the least-privilege app DB role (INSERT and SELECT only on `audit_events`).
+- **5a Audit writer** (`app/audit.py`, `routers/audit.py`): `record(...)` in the caller's transaction, `GET /audit-events`, trigger and grant tests, import events hooked in. Checkpoint (1) with 5.0.
+- Then in parallel:
+  - **5b Resolution workflow** (`routers/exceptions.py`, `app/reconciliation/resolution.py`): state machine, `propose`/`approve`/`reject`/`reopen`, notes required where specified, version column with 409, reviewer cannot approve own proposal, audit events written. Checkpoint (2).
+  - **5c Exports** (`routers/exports.py`): three streaming CSV endpoints, formula-injection-safe cells. Checkpoint (3).
+
+Gate: API gate plus migration round trip. Required tests: full role matrix, stale-version 409, trigger rejects UPDATE and DELETE, export streaming does not load the whole result set.
+
+Exit: audit trail covers imports and all four decisions; role rules hold.
+
+### Phase 6 — Dashboard and UX
+
+Goal: a new user completes the whole workflow unaided.
+
+- **6.0 Foundation** (one agent): generated typed client (`openapi-typescript` plus `openapi-fetch`, `bun run gen:api` reading `backend/openapi.json`, checked by `contract.yml`), auth shell (login with Google button and demo login, CSRF handling, API base URL), and a small read-only workspace summary endpoint for dashboard counts. Checkpoint (1).
+- Then in parallel, one route directory each:
+  - **6a Workspaces and import wizard**: upload straight to the API origin, mapping, preview, polling of batch status.
+  - **6b Dashboard**: import health, match rate, outstanding exceptions, batch history. Checkpoint (2) with 6a.
+  - **6c Exception queue and detail**: filters, search, resolution actions with 409 handling. Checkpoint (3).
+- **6d States and accessibility pass**: loading, empty, error, retry; labelled forms; keyboard use; responsive layouts. Checkpoint (4).
+
+Gate: web gate, API gate, client drift gate.
+
+Exit: the end-to-end workflow works from the UI against a local API.
+
+### Phase 7 — Production readiness
+
+Goal: key failure modes have reproducible tests and documented recovery.
+
+Parallel slices:
+- **7a Security**: rate limiting on auth and expensive endpoints, log redaction, security review written into `docs/security.md`, fixes for anything found. Checkpoint (1).
+- **7b Observability**: `/health`, import duration, rows per second, match rate and exception rate emitted as structured log fields (no metrics service). Checkpoint (2).
+- **7c E2E** (`frontend/e2e/`, `e2e.yml`): exactly three Playwright flows from section 11, using the seeded demo login. Checkpoint (3).
+- **7d Operations**: `pg_dump` script and a tested restore, incident notes, `backend/scripts/benchmark.py` and measured numbers. Checkpoint (4).
+
+Gate: API gate, web gate, Playwright against the local stack, restore test run once.
+
+Exit: failure paths tested; recovery steps written and exercised.
+
+### Phase 8 — Release pipeline and live deployment
+
+Goal: a change moves from PR to staging through documented automation.
+
+- **8a Seed and demo login** (`backend/scripts/seed_demo.py`, login-page demo reviewer credentials). Checkpoint (1).
+- **8b Deploy config** (one `backend/Dockerfile`, a Render service file and a Cloud Run deploy script, `BACKEND_URL` for the Vercel rewrite, Vercel project settings, Neon pooled and direct URLs, migrations as a pre-deploy step only, the `/api/*` rewrite to Render, host-only cookie settings, and the 10 MB upload-through-rewrite check). Checkpoint (2).
+- **8c Release workflow** (`.github/workflows/`): versioned images, staging deploy, migration, health check, Playwright smoke, deployment metadata. Folded into checkpoint (2) if small, otherwise checkpoint (3).
+- **8d Docs** (`README.md`, architecture, API docs, trade-offs, limitations, screenshots, cold-start note). Final checkpoint.
+
+Gate: all earlier gates, then a staging deploy run by the user, health check green, smoke tests green.
+
+Exit: Definition of Done in section 14 is met for staging.
 
 ## 14. Definition of Done
 

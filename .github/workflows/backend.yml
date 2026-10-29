@@ -62,14 +62,14 @@ jobs:
       - run: pip install -e ".[dev]"
         if: hashFiles('backend/pyproject.toml') != ''
         working-directory: backend
-      - run: |
-        if: hashFiles('backend/pyproject.toml') != ''
+      - if: hashFiles('backend/pyproject.toml') != ''
+        run: |
           if [ -f alembic.ini ]; then
             python -m alembic upgrade head
           fi
         working-directory: backend
-      - run: |
-        if: hashFiles('backend/pyproject.toml') != ''
+      - if: hashFiles('backend/pyproject.toml') != ''
+        run: |
           export DATABASE_URL="postgresql+psycopg://postgres:postgres@localhost:5432/reconcile_test"
           export SESSION_SECRET="ci-dummy-secret"
           pytest
@@ -100,6 +100,6 @@ jobs:
         if: hashFiles('backend/Dockerfile') != ''
       - uses: docker/setup-buildx-action@v3
         if: hashFiles('backend/Dockerfile') != ''
-      - run: |
-        if: hashFiles('backend/Dockerfile') != ''
+      - if: hashFiles('backend/Dockerfile') != ''
+        run: |
           docker build -t reconcile-backend:latest backend/

@@ -1,0 +1,49 @@
+name: Contract Check
+
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/contract.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    if: hashFiles('backend/app/openapi_export.py') != '' && hashFiles('frontend/package.json') != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Setup backend
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -e ".[dev]"
+        working-directory: backend
+      
+      # Setup frontend
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+        working-directory: frontend
+      
+      # Generate OpenAPI
+      - run: python -m app.openapi_export
+        working-directory: backend
+      
+      # Generate API client
+      - run: bun run gen:api
+        working-directory: frontend
+      
+      # Check for changes
+      - run: git diff --exit-code

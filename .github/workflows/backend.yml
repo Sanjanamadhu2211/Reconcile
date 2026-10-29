@@ -1,0 +1,93 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    if: hashFiles('backend/pyproject.toml') != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -e ".[dev]"
+        working-directory: backend
+      - run: ruff format --check
+        working-directory: backend
+      - run: ruff check
+        working-directory: backend
+
+  test:
+    if: hashFiles('backend/pyproject.toml') != ''
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: reconcile_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -e ".[dev]"
+        working-directory: backend
+      - run: |
+          if [ -f "backend/alembic.ini" ]; then
+            python -m alembic upgrade head
+          fi
+        working-directory: backend
+      - run: |
+          export DATABASE_URL="postgresql+psycopg://postgres:postgres@localhost:5432/reconcile_test"
+          export SESSION_SECRET="ci-dummy-secret"
+          pytest
+        working-directory: backend
+
+  audit:
+    if: hashFiles('backend/pyproject.toml') != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -e ".[dev]"
+        working-directory: backend
+      - run: pip-audit
+        working-directory: backend
+
+  build:
+    if: hashFiles('backend/Dockerfile') != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - run: |
+          docker build -t reconcile-backend:latest backend/
+        working-directory: backend

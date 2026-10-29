@@ -1,0 +1,49 @@
+version: 2
+updates:
+  # Backend dependencies
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Sanjanamadhu2211"
+    assignees:
+      - "Sanjanamadhu2211"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+  
+  # Frontend dependencies
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Sanjanamadhu2211"
+    assignees:
+      - "Sanjanamadhu2211"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+  
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Sanjanamadhu2211"
+    assignees:
+      - "Sanjanamadhu2211"
+    commit-message:
+      prefix: "ci"
+      include: "scope"

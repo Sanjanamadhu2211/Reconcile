@@ -447,6 +447,38 @@ class TestLargeInput:
         # No exceptions because everything matches perfectly in both pairings
         assert len(result.exceptions) == 0
 
+    def test_timed_matches_at_scale_are_exact(self):
+        """5,000 timed order-payment pairs and payment-settlement pairs match exactly."""
+        import time
+
+        records = []
+        for i in range(5_000):
+            dt = _utc(2024, 1, 1) + timedelta(minutes=i)
+            ext_id = f"PAY-{i}"
+            records.append(_record(f"O{i}", "orders", f"ORD-{i}", f"{1000 + i}.00", "USD", dt))
+            records.append(
+                _record(
+                    f"P{i}", "payments", ext_id, f"{1000 + i}.00", "USD", dt + timedelta(hours=1)
+                )
+            )
+            records.append(
+                _record(
+                    f"S{i}", "settlements", ext_id, f"{1000 + i}.00", "USD", dt + timedelta(hours=2)
+                )
+            )
+
+        start = time.perf_counter()
+        result = run_matching(records)
+        elapsed = time.perf_counter() - start
+
+        assert elapsed < 10.0, f"Matching took {elapsed:.2f}s, expected < 10s"
+        timed = {
+            (m.left_key, m.right_key) for m in result.matches if m.rule == "amount_currency_time"
+        }
+        assert timed == {(f"O{i}", f"P{i}") for i in range(5_000)}
+        assert len(result.matches) == 10_000
+        assert result.exceptions == ()
+
 
 class TestCrossPairing:
     """Tests involving multiple pairings."""

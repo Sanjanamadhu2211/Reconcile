@@ -2,8 +2,11 @@ rule,left_source,left_external_id,left_row_number,right_source,right_external_id
 exact_id,orders,ORD-001,2,payments,ORD-001,2
 amount_currency_time,orders,ORD-002,3,payments,PAY-002,3
 amount_currency_time,orders,ORD-003,4,payments,PAY-003,4
+amount_currency_time,orders,ORD-010,11,payments,PAY-010,11
+amount_currency_time,orders,ORD-015,17,payments,PAY-016,18
 exact_id,payments,ORD-001,2,settlements,ORD-001,2
 amount_currency_time,payments,PAY-002,3,settlements,SETL-002,3
 amount_currency_time,payments,PAY-003,4,settlements,SETL-003,4
+amount_currency_time,payments,PAY-010,11,settlements,SETL-010,11
+amount_currency_time,payments,PAY-016,18,settlements,SETL-020,20
 exact_id,refunds,PAY-011,2,payments,PAY-011,13
-exact_id,refunds,REF-DUP-001,5,payments,PAY-DUP-001,23

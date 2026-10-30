@@ -1,13 +1,13 @@
 category,source,external_id,row_number
+unmatched,fees,FEE-001,2
+unmatched,fees,FEE-002,3
 unmatched,orders,ORD-004,5
 unmatched,orders,ORD-005,6
 amount_mismatch,orders,ORD-006,7
 duplicate,orders,ORD-006,8
 amount_mismatch,orders,ORD-008,9
 duplicate,orders,ORD-008,10
-unmatched,orders,ORD-010,11
 duplicate,orders,ORD-010,12
-unmatched,orders,ORD-015,17
 ambiguous,orders,ORD-AMB1,18
 ambiguous,orders,ORD-AMB2A,19
 ambiguous,orders,ORD-AMB2B,20
@@ -17,10 +17,8 @@ amount_mismatch,payments,ORD-006,7
 duplicate,payments,ORD-006,8
 amount_mismatch,payments,ORD-008,9
 duplicate,payments,ORD-008,10
-unmatched,payments,PAY-010,11
 duplicate,payments,PAY-010,12
 unmatched,payments,PAY-011,13
-unmatched,payments,PAY-016,18
 ambiguous,payments,PAY-AMB1A,19
 ambiguous,payments,PAY-AMB1B,20
 ambiguous,payments,PAY-AMB2,21
@@ -28,6 +26,7 @@ amount_mismatch,payments,REF-AMT-MISMATCH,22
 unmatched,payments,PAY-DUP-001,23
 unmatched,refunds,REF-002,3
 amount_mismatch,refunds,REF-AMT-MISMATCH,4
+unmatched,refunds,REF-DUP-001,5
 duplicate,refunds,REF-DUP-001,6
 amount_mismatch,settlements,ORD-006,7
 duplicate,settlements,ORD-006,8
@@ -37,5 +36,3 @@ duplicate,settlements,SETL-010,12
 ambiguous,settlements,SETL-AMB1,13
 ambiguous,settlements,SETL-AMB2A,14
 ambiguous,settlements,SETL-AMB2B,15
-unmatched,fees,FEE-001,2
-unmatched,fees,FEE-002,3

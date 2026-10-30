@@ -22,6 +22,7 @@ INPUT_FILES = [
     "refunds.csv",
     "settlements.csv",
     "fees.csv",
+    "unknown.csv",
 ]
 
 EXPECTED_IMPORT = "expected_import_rows.csv"

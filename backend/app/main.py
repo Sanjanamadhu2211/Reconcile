@@ -7,6 +7,7 @@ from app.routers import (
     health,
     imports,
     organizations,
+    reconciliation_results,
     reconciliation_runs,
     workspaces,
 )
@@ -22,6 +23,7 @@ def create_app() -> FastAPI:
     app.include_router(organizations.router)
     app.include_router(workspaces.router)
     app.include_router(imports.router)
+    app.include_router(reconciliation_results.router)
     app.include_router(reconciliation_runs.router)
     return app
 

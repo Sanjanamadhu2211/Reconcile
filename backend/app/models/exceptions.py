@@ -1,11 +1,15 @@
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, UUIDPrimaryKeyMixin
+
+if TYPE_CHECKING:
+    from app.models import ImportRow, Transaction
 
 
 class Exception(UUIDPrimaryKeyMixin, Base):
@@ -39,6 +43,9 @@ class Exception(UUIDPrimaryKeyMixin, Base):
     updated_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), server_default=sa.text("now()")
     )
+
+    transaction: Mapped["Transaction | None"] = relationship("Transaction", lazy="selectin")
+    import_row: Mapped["ImportRow | None"] = relationship("ImportRow", lazy="selectin")
 
     __table_args__ = (
         sa.CheckConstraint(

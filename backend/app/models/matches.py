@@ -1,9 +1,13 @@
 import uuid
+from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
+
+if TYPE_CHECKING:
+    from app.models import Transaction
 
 
 class Match(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
@@ -21,6 +25,13 @@ class Match(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     )
     right_transaction_id: Mapped[uuid.UUID] = mapped_column(
         sa.Uuid, sa.ForeignKey("transactions.id", ondelete="CASCADE")
+    )
+
+    left_transaction: Mapped["Transaction"] = relationship(
+        "Transaction", foreign_keys=[left_transaction_id], lazy="selectin"
+    )
+    right_transaction: Mapped["Transaction"] = relationship(
+        "Transaction", foreign_keys=[right_transaction_id], lazy="selectin"
     )
 
     __table_args__ = (

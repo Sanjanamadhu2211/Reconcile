@@ -231,6 +231,23 @@ export interface paths {
         patch: operations["update_workspace_api_v1_workspaces__workspace_id__patch"];
         trace?: never;
     };
+    "/api/v1/workspaces/{workspace_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Workspace Summary */
+        get: operations["get_workspace_summary_api_v1_workspaces__workspace_id__summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspace_id}/imports": {
         parameters: {
             query?: never;
@@ -583,6 +600,52 @@ export interface components {
              */
             created_at: string;
         };
+        /** BatchCounts */
+        BatchCounts: {
+            /**
+             * Pending
+             * @default 0
+             */
+            pending: number;
+            /**
+             * Processing
+             * @default 0
+             */
+            processing: number;
+            /**
+             * Completed
+             * @default 0
+             */
+            completed: number;
+            /**
+             * Failed
+             * @default 0
+             */
+            failed: number;
+        };
+        /** ExceptionCategoryCounts */
+        ExceptionCategoryCounts: {
+            /**
+             * Unmatched
+             * @default 0
+             */
+            unmatched: number;
+            /**
+             * Ambiguous
+             * @default 0
+             */
+            ambiguous: number;
+            /**
+             * Amount Mismatch
+             * @default 0
+             */
+            amount_mismatch: number;
+            /**
+             * Duplicate
+             * @default 0
+             */
+            duplicate: number;
+        };
         /** ExceptionImportRowSummary */
         ExceptionImportRowSummary: {
             /** Row Number */
@@ -620,6 +683,24 @@ export interface components {
              */
             reconciliation_run_id: string;
         };
+        /** ExceptionStatusCounts */
+        ExceptionStatusCounts: {
+            /**
+             * Open
+             * @default 0
+             */
+            open: number;
+            /**
+             * Proposed
+             * @default 0
+             */
+            proposed: number;
+            /**
+             * Resolved
+             * @default 0
+             */
+            resolved: number;
+        };
         /** ExceptionTransactionSummary */
         ExceptionTransactionSummary: {
             /** Source Name */
@@ -635,6 +716,11 @@ export interface components {
              * Format: date-time
              */
             occurred_at: string;
+        };
+        /** ExceptionsSummary */
+        ExceptionsSummary: {
+            by_status: components["schemas"]["ExceptionStatusCounts"];
+            by_category: components["schemas"]["ExceptionCategoryCounts"];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -705,6 +791,32 @@ export interface components {
             invalid_rows: number;
             /** Problems */
             problems: components["schemas"]["ImportErrorOut"][];
+        };
+        /** ImportsSummary */
+        ImportsSummary: {
+            batches_by_status: components["schemas"]["BatchCounts"];
+            /** Rows Imported */
+            rows_imported: number;
+            /** Rows Invalid */
+            rows_invalid: number;
+            /** Recent Batches */
+            recent_batches: components["schemas"]["RecentBatch"][];
+        };
+        /** LatestRunSummary */
+        LatestRunSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Completed At */
+            completed_at: string | null;
+            /** Matches Count */
+            matches_count: number;
+            /** Exceptions Count */
+            exceptions_count: number;
+            /** Match Rate */
+            match_rate: string | null;
         };
         /** LoginRequest */
         LoginRequest: {
@@ -781,6 +893,29 @@ export interface components {
             /** Name */
             name: string;
             role: components["schemas"]["Role"];
+        };
+        /** RecentBatch */
+        RecentBatch: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Source Name */
+            source_name: string;
+            /** Filename */
+            filename: string | null;
+            /** Status */
+            status: string;
+            /** Rows Total */
+            rows_total: number;
+            /** Rows Failed */
+            rows_failed: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** ReconciliationRunOut */
         ReconciliationRunOut: {
@@ -939,6 +1074,12 @@ export interface components {
             name: string;
             /** Timestamp Tolerance Hours */
             timestamp_tolerance_hours: number;
+        };
+        /** WorkspaceSummary */
+        WorkspaceSummary: {
+            imports: components["schemas"]["ImportsSummary"];
+            latest_run: components["schemas"]["LatestRunSummary"] | null;
+            exceptions: components["schemas"]["ExceptionsSummary"];
         };
         /** WorkspaceUpdate */
         WorkspaceUpdate: {
@@ -1572,6 +1713,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspaceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_workspace_summary_api_v1_workspaces__workspace_id__summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: {
+                session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceSummary"];
                 };
             };
             /** @description Validation Error */

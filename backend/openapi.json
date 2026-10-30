@@ -1323,6 +1323,65 @@
         }
       }
     },
+    "/api/v1/workspaces/{workspace_id}/summary": {
+      "get": {
+        "tags": [
+          "summary"
+        ],
+        "summary": "Get Workspace Summary",
+        "operationId": "get_workspace_summary_api_v1_workspaces__workspace_id__summary_get",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/workspaces/{workspace_id}/imports": {
       "post": {
         "tags": [
@@ -3247,6 +3306,58 @@
         ],
         "title": "AuditEventOut"
       },
+      "BatchCounts": {
+        "properties": {
+          "pending": {
+            "type": "integer",
+            "title": "Pending",
+            "default": 0
+          },
+          "processing": {
+            "type": "integer",
+            "title": "Processing",
+            "default": 0
+          },
+          "completed": {
+            "type": "integer",
+            "title": "Completed",
+            "default": 0
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "BatchCounts"
+      },
+      "ExceptionCategoryCounts": {
+        "properties": {
+          "unmatched": {
+            "type": "integer",
+            "title": "Unmatched",
+            "default": 0
+          },
+          "ambiguous": {
+            "type": "integer",
+            "title": "Ambiguous",
+            "default": 0
+          },
+          "amount_mismatch": {
+            "type": "integer",
+            "title": "Amount Mismatch",
+            "default": 0
+          },
+          "duplicate": {
+            "type": "integer",
+            "title": "Duplicate",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "ExceptionCategoryCounts"
+      },
       "ExceptionImportRowSummary": {
         "properties": {
           "row_number": {
@@ -3347,6 +3458,27 @@
         ],
         "title": "ExceptionItem"
       },
+      "ExceptionStatusCounts": {
+        "properties": {
+          "open": {
+            "type": "integer",
+            "title": "Open",
+            "default": 0
+          },
+          "proposed": {
+            "type": "integer",
+            "title": "Proposed",
+            "default": 0
+          },
+          "resolved": {
+            "type": "integer",
+            "title": "Resolved",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "ExceptionStatusCounts"
+      },
       "ExceptionTransactionSummary": {
         "properties": {
           "source_name": {
@@ -3380,6 +3512,22 @@
           "occurred_at"
         ],
         "title": "ExceptionTransactionSummary"
+      },
+      "ExceptionsSummary": {
+        "properties": {
+          "by_status": {
+            "$ref": "#/components/schemas/ExceptionStatusCounts"
+          },
+          "by_category": {
+            "$ref": "#/components/schemas/ExceptionCategoryCounts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "by_status",
+          "by_category"
+        ],
+        "title": "ExceptionsSummary"
       },
       "HTTPValidationError": {
         "properties": {
@@ -3577,6 +3725,85 @@
         ],
         "title": "ImportPreviewOut"
       },
+      "ImportsSummary": {
+        "properties": {
+          "batches_by_status": {
+            "$ref": "#/components/schemas/BatchCounts"
+          },
+          "rows_imported": {
+            "type": "integer",
+            "title": "Rows Imported"
+          },
+          "rows_invalid": {
+            "type": "integer",
+            "title": "Rows Invalid"
+          },
+          "recent_batches": {
+            "items": {
+              "$ref": "#/components/schemas/RecentBatch"
+            },
+            "type": "array",
+            "title": "Recent Batches"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batches_by_status",
+          "rows_imported",
+          "rows_invalid",
+          "recent_batches"
+        ],
+        "title": "ImportsSummary"
+      },
+      "LatestRunSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "matches_count": {
+            "type": "integer",
+            "title": "Matches Count"
+          },
+          "exceptions_count": {
+            "type": "integer",
+            "title": "Exceptions Count"
+          },
+          "match_rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Rate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "completed_at",
+          "matches_count",
+          "exceptions_count",
+          "match_rate"
+        ],
+        "title": "LatestRunSummary"
+      },
       "LoginRequest": {
         "properties": {
           "email": {
@@ -3759,6 +3986,58 @@
           "role"
         ],
         "title": "OrganizationOut"
+      },
+      "RecentBatch": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "source_name": {
+            "type": "string",
+            "title": "Source Name"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "rows_total": {
+            "type": "integer",
+            "title": "Rows Total"
+          },
+          "rows_failed": {
+            "type": "integer",
+            "title": "Rows Failed"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source_name",
+          "filename",
+          "status",
+          "rows_total",
+          "rows_failed",
+          "created_at"
+        ],
+        "title": "RecentBatch"
       },
       "ReconciliationRunOut": {
         "properties": {
@@ -4140,6 +4419,33 @@
           "timestamp_tolerance_hours"
         ],
         "title": "WorkspaceOut"
+      },
+      "WorkspaceSummary": {
+        "properties": {
+          "imports": {
+            "$ref": "#/components/schemas/ImportsSummary"
+          },
+          "latest_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LatestRunSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "exceptions": {
+            "$ref": "#/components/schemas/ExceptionsSummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "imports",
+          "latest_run",
+          "exceptions"
+        ],
+        "title": "WorkspaceSummary"
       },
       "WorkspaceUpdate": {
         "properties": {

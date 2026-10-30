@@ -531,7 +531,7 @@ Exit: the end-to-end workflow works from the UI against a local API.
 Goal: key failure modes have reproducible tests and documented recovery.
 
 Parallel slices:
-- **7a Security**: rate limiting on auth and expensive endpoints, log redaction, security review written into `docs/security.md`, fixes for anything found. Checkpoint (1).
+- **7a Security**: rate limiting on auth and expensive endpoints (the login limiter keys on the client address, which is the proxy behind the Vercel rewrite, so key it on the forwarded address only when it comes from the trusted proxy), log redaction, security review written into `docs/security.md`, fixes for anything found. Checkpoint (1).
 - **7b Observability**: `/health`, import duration, rows per second, match rate and exception rate emitted as structured log fields (no metrics service). Checkpoint (2).
 - **7c E2E** (`frontend/e2e/`, `e2e.yml`): exactly three Playwright flows from section 11, using the seeded demo login. Checkpoint (3).
 - **7d Operations**: `pg_dump` script and a tested restore, incident notes, `backend/scripts/benchmark.py` and measured numbers. Checkpoint (4).

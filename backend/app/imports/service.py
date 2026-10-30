@@ -62,15 +62,17 @@ def _find_batch(
 def create_or_get_batch(
     db: Session,
     *,
-    user: User,
+    user: User | None,
     workspace: Workspace,
     source_name: str,
     filename: str | None,
     stream: BinaryIO,
     idempotency_key: str | None = None,
+    enforce_size_cap: bool = True,
 ) -> tuple[ImportBatch, bool]:
     size = stream.seek(0, io.SEEK_END)
-    check_size(size, get_settings().max_upload_mb)
+    if enforce_size_cap:
+        check_size(size, get_settings().max_upload_mb)
     checksum = sha256_hex(stream)
 
     batch = _find_batch(db, workspace.id, checksum, idempotency_key)
@@ -86,7 +88,7 @@ def create_or_get_batch(
         file_checksum=checksum,
         idempotency_key=idempotency_key,
         status="pending",
-        created_by=user.id,
+        created_by=user.id if user is not None else None,
     )
     db.add(batch)
     try:

@@ -79,7 +79,7 @@ Keep the system simple and deployable without a large infrastructure footprint.
 - **Validation:** FastAPI's built-in request validation and Pydantic models.
 - **Unit/integration tests:** Pytest for `backend/`, `bun test` for `frontend/`; two independent suites
 - **Browser tests:** Playwright (run through `bunx`)
-- **Local infrastructure:** Docker Compose
+- **Local infrastructure:** none beyond a locally installed PostgreSQL; Docker is never run on the dev machine. CI uses a Postgres service container, and the backend image is only built in CI and by the host.
 - **CI/CD:** GitHub Actions
 - **Deployment:** Docker-compatible app hosting plus managed PostgreSQL
 - **Observability:** structured JSON logs with request IDs and a health endpoint. Errors are read from the Render and Vercel log viewers; there is no Sentry.
@@ -138,7 +138,6 @@ reconcile/
 │   ├── security.md
 │   └── adr/                  # one ADR per Key Design Decisions bullet
 ├── .github/workflows/
-├── docker-compose.yml
 └── README.md                 # incl. setup, architecture, demo instructions, free-tier cold-start note
 ```
 
@@ -400,6 +399,7 @@ Nine phases (0 to 8). Subagents do the work; the orchestrator plans, dispatches,
 
 **Subagent dispatch**
 - Orchestrator calls `orchestrator_capabilities` once, then hands out slices round robin: MiMo V2.6 Flash, Nemotron 3.5 Super VL, North Mini Code, repeat. A rate-limited model is skipped for that turn and swapped for a backup. Haiku only on escalation (retry once on the same model with the exact failure, then the next model, then Haiku), and the report says when it was used.
+- Never run Docker locally: no `docker`, `docker compose`, or container builds in briefs or by agents. Servers run locally (`uvicorn`, `bun run dev`). Database-dependent tests skip when no database is reachable and run in CI.
 - Max 5 subagents at once. Slices running in parallel own disjoint directories; shared files (`app/main.py` router registration, `pyproject.toml`, `package.json`) are touched by one named slice only, and the rest add their own files.
 - Migrations are never written in parallel. Each phase has a schema step (x.0) done by one agent before the parallel slices start, so there is one Alembic head at all times.
 - Each brief is self-contained: exact paths, goal, interfaces to honour, what must not change, stack, numbered steps, the gate commands, the git rules, and the fixed report format (files changed, commands run with pass/fail, commits, skipped or unsure).
@@ -446,11 +446,11 @@ Goal: a fresh clone starts locally and passes CI.
 Parallel slices (disjoint directories):
 - **1a API skeleton** (`backend/`): `pyproject.toml`, app factory, validated settings, `/health` with DB check, JSON logs with request IDs, Dockerfile, Pytest (`tests/unit`, `tests/integration`) and Ruff setup, DB test fixture, one smoke test per suite.
 - **1b Web skeleton** (`frontend/`): Next.js + TypeScript, Bun (`bun.lock`), ESLint, Prettier, `bun test` with one smoke test, placeholder page.
-- **1c Infra** (repo root, `.github/`): `docker-compose.yml` (PostgreSQL) and the removal of the empty-folder guard from the CI workflows now that both folders exist. Each folder carries its own `.env.example`.
+- **1c CI cleanup**: remove the empty-folder guards from `backend.yml` and `frontend.yml` now that both folders exist (`contract.yml` keeps its guard until Phase 6). Each folder carries its own `.env.example`.
 
 Checkpoints: (1) API skeleton plus Compose; (2) web skeleton; (3) CI guards removed and green on both folders.
 
-Gate: `docker compose up -d`, then API gate and web gate from a clean checkout, and the first CI run is green.
+Gate: API gate and web gate from a clean checkout (DB-dependent tests skip locally when no database is reachable and run in CI), and the first CI run is green.
 
 Exit: fresh clone runs locally, CI config in place.
 

@@ -2,6 +2,8 @@ import os
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 
 from app.db import get_session_factory
 from app.main import app
@@ -20,4 +22,8 @@ def client():
 @pytest.fixture
 def db():
     with get_session_factory()() as session:
+        try:
+            session.execute(text("SELECT 1"))
+        except OperationalError:
+            pytest.skip("no PostgreSQL reachable at DATABASE_URL")
         yield session

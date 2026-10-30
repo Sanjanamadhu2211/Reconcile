@@ -20,20 +20,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-        if: hashFiles('frontend/package.json') != ''
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
-        if: hashFiles('frontend/package.json') != ''
         working-directory: frontend
       - run: bun run lint
-        if: hashFiles('frontend/package.json') != ''
         working-directory: frontend
       - run: bun run format:check
-        if: hashFiles('frontend/package.json') != ''
         working-directory: frontend
       - run: bunx tsc --noEmit
-        if: hashFiles('frontend/package.json') != ''
         working-directory: frontend
 
   test:
@@ -41,14 +36,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-        if: hashFiles('frontend/package.json') != ''
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
-        if: hashFiles('frontend/package.json') != ''
         working-directory: frontend
       - run: bun test
-        if: hashFiles('frontend/package.json') != ''
         working-directory: frontend
 
   build:
@@ -56,12 +48,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-        if: hashFiles('frontend/package.json') != ''
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
-        if: hashFiles('frontend/package.json') != ''
         working-directory: frontend
       - run: bun run build
-        if: hashFiles('frontend/package.json') != ''
         working-directory: frontend

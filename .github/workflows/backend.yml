@@ -20,19 +20,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        if: hashFiles('backend/pyproject.toml') != ''
         with:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: backend/pyproject.toml
       - run: pip install -e ".[dev]"
-        if: hashFiles('backend/pyproject.toml') != ''
         working-directory: backend
       - run: ruff format --check
-        if: hashFiles('backend/pyproject.toml') != ''
         working-directory: backend
       - run: ruff check
-        if: hashFiles('backend/pyproject.toml') != ''
         working-directory: backend
 
   test:
@@ -54,22 +50,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        if: hashFiles('backend/pyproject.toml') != ''
         with:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: backend/pyproject.toml
       - run: pip install -e ".[dev]"
-        if: hashFiles('backend/pyproject.toml') != ''
         working-directory: backend
-      - if: hashFiles('backend/pyproject.toml') != ''
-        run: |
+      - run: |
           if [ -f alembic.ini ]; then
             python -m alembic upgrade head
           fi
         working-directory: backend
-      - if: hashFiles('backend/pyproject.toml') != ''
-        run: |
+      - run: |
           export DATABASE_URL="postgresql+psycopg://postgres:postgres@localhost:5432/reconcile_test"
           export SESSION_SECRET="ci-dummy-secret"
           pytest
@@ -80,16 +72,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        if: hashFiles('backend/pyproject.toml') != ''
         with:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: backend/pyproject.toml
       - run: pip install -e ".[dev]"
-        if: hashFiles('backend/pyproject.toml') != ''
         working-directory: backend
       - run: pip-audit
-        if: hashFiles('backend/pyproject.toml') != ''
         working-directory: backend
 
   build:
@@ -97,9 +86,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
-        if: hashFiles('backend/Dockerfile') != ''
       - uses: docker/setup-buildx-action@v3
-        if: hashFiles('backend/Dockerfile') != ''
-      - if: hashFiles('backend/Dockerfile') != ''
-        run: |
+      - run: |
           docker build -t reconcile-backend:latest backend/

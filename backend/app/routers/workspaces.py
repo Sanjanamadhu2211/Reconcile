@@ -2,15 +2,15 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import and_, select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.auth.csrf import require_csrf
 from app.auth.dependencies import get_current_user
-from app.auth.permissions import Role, load_membership, require_role
+from app.auth.permissions import Role, load_member_workspace, load_membership, require_role
 from app.db import get_db
-from app.models import OrganizationMembership, User, Workspace
+from app.models import ImportBatch, OrganizationMembership, User, Workspace
 from app.pagination import Limit, Offset
 from app.schemas.workspaces import WorkspaceCreate, WorkspaceOut, WorkspaceUpdate
 
@@ -19,26 +19,6 @@ router = APIRouter(
     tags=["workspaces"],
     dependencies=[Depends(get_current_user)],
 )
-
-
-def _member_workspace(
-    db: Session, user: User, workspace_id: uuid.UUID
-) -> tuple[Workspace, OrganizationMembership]:
-    # Workspaces outside the caller's organizations match nothing, like missing ones
-    row = db.execute(
-        select(Workspace, OrganizationMembership)
-        .join(
-            OrganizationMembership,
-            and_(
-                OrganizationMembership.organization_id == Workspace.organization_id,
-                OrganizationMembership.user_id == user.id,
-            ),
-        )
-        .where(Workspace.id == workspace_id)
-    ).first()
-    if row is None:
-        raise HTTPException(status_code=404, detail="Workspace not found")
-    return tuple(row)
 
 
 def _commit_or_conflict(db: Session) -> None:
@@ -103,7 +83,7 @@ def get_workspace(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ):
-    workspace, _ = _member_workspace(db, user, workspace_id)
+    workspace, _ = load_member_workspace(db, user, workspace_id)
     return workspace
 
 
@@ -118,7 +98,7 @@ def update_workspace(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ):
-    workspace, membership = _member_workspace(db, user, workspace_id)
+    workspace, membership = load_member_workspace(db, user, workspace_id)
     require_role(membership, Role.reviewer)
     for field, value in body.model_dump(exclude_none=True).items():
         setattr(workspace, field, value)
@@ -136,7 +116,8 @@ def delete_workspace(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ):
-    workspace, membership = _member_workspace(db, user, workspace_id)
+    workspace, membership = load_member_workspace(db, user, workspace_id)
     require_role(membership, Role.reviewer)
+    db.execute(delete(ImportBatch).where(ImportBatch.workspace_id == workspace.id))
     db.delete(workspace)
     db.commit()

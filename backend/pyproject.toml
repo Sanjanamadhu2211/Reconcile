@@ -17,6 +17,7 @@ dependencies = [
     "email-validator",
     "authlib",
     "httpx",
+    "python-multipart",
 ]
 
 [project.optional-dependencies]

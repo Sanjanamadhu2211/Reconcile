@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from typing import BinaryIO
 
@@ -36,6 +36,28 @@ class ImportFileError(Exception):
 def _is_blank_row(row: list[str]) -> bool:
     """Check if a CSV row is completely empty/whitespace."""
     return all(not cell.strip() for cell in row)
+
+
+def _find_header(reader: Iterable[list[str]]) -> tuple[int, list[str]]:
+    for line_number, row in enumerate(reader, start=1):
+        if not _is_blank_row(row):
+            return line_number, [cell.strip() for cell in row]
+    raise ImportFileError("Empty file: no header row found")
+
+
+def read_header(stream: BinaryIO) -> list[str]:
+    """Return the header cells of an upload without reading its rows."""
+    stream.seek(0)
+    text_stream = io.TextIOWrapper(stream, encoding="utf-8-sig", newline="")
+    try:
+        return _find_header(csv.reader(text_stream))[1]
+    except UnicodeDecodeError as e:
+        raise ImportFileError("ENCODING_ERROR") from e
+    except csv.Error as e:
+        raise ImportFileError("MALFORMED_CSV") from e
+    finally:
+        # Closing the wrapper would also close the caller's upload stream
+        text_stream.detach()
 
 
 def read_rows(
@@ -72,20 +94,12 @@ def read_rows(
     reader = csv.reader(text_stream)
 
     # Read header row (first non-empty row)
-    header_row = None
-    header_line_number = 0
     try:
-        for line_number, row in enumerate(reader, start=1):
-            if _is_blank_row(row):
-                continue
-            header_row = [cell.strip() for cell in row]
-            header_line_number = line_number
-            break
+        header_line_number, header_row = _find_header(reader)
     except UnicodeDecodeError as e:
         raise ImportFileError("ENCODING_ERROR") from e
-
-    if header_row is None:
-        raise ImportFileError("Empty file: no header row found")
+    except csv.Error as e:
+        raise ImportFileError("MALFORMED_CSV") from e
 
     # Validate headers
     try:
@@ -249,3 +263,5 @@ def read_rows(
             )
     except UnicodeDecodeError as e:
         raise ImportFileError("ENCODING_ERROR") from e
+    except csv.Error as e:
+        raise ImportFileError("MALFORMED_CSV") from e

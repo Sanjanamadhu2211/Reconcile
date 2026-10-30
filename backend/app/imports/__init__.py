@@ -24,6 +24,7 @@ from .normalize import (
 from .reader import (
     ImportFileError,
     RowResult,
+    read_header,
     read_rows,
 )
 from .service import (
@@ -52,6 +53,7 @@ __all__ = [
     # reader
     "RowResult",
     "ImportFileError",
+    "read_header",
     "read_rows",
     # checksum
     "check_size",

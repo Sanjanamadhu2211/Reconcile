@@ -1,6 +1,7 @@
 import hashlib
 import re
 import uuid
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -10,7 +11,7 @@ from sqlalchemy import select, text
 
 from app.db import get_engine, get_session_factory
 from app.main import app
-from app.models import Organization, OrganizationMembership, Workspace
+from app.models import ImportBatch, Organization, OrganizationMembership, Workspace
 
 pytestmark = pytest.mark.integration
 
@@ -20,6 +21,11 @@ ME = "/api/v1/auth/me"
 ORGANIZATIONS = "/api/v1/organizations"
 WORKSPACES = "/api/v1/workspaces"
 PASSWORD = "correct horse battery"
+ORDERS_CSV = (Path(__file__).parents[1] / "fixtures" / "reconciliation" / "orders.csv").read_bytes()
+UPLOAD_ROUTES = {
+    ("POST", "/api/v1/workspaces/{workspace_id}/imports"),
+    ("POST", "/api/v1/workspaces/{workspace_id}/imports/preview"),
+}
 
 # A new public route must be added here on purpose; everything else is swept.
 PUBLIC_ROUTES = {
@@ -43,6 +49,15 @@ TENANT_BODIES = {
     ("POST", WORKSPACES): lambda t: {"organization_id": t.org_id, "name": "Stolen"},
     ("PATCH", "/api/v1/workspaces/{workspace_id}"): lambda t: {"name": "Renamed"},
 }
+
+
+def _send(client, method, template, url, headers, body=None):
+    if (method, template) in UPLOAD_ROUTES:
+        files = {"file": ("orders.csv", ORDERS_CSV, "text/csv")}
+        return client.request(
+            method, url, headers=headers, data={"source_name": "orders"}, files=files
+        )
+    return client.request(method, url, headers=headers, json=body)
 
 
 def _endpoints(routes):
@@ -122,6 +137,13 @@ def victim():
     owner, owner_user = _signed_in()
     org = _organization(owner)
     workspace = _workspace(owner, org["id"])
+    imported = owner.post(
+        f"{WORKSPACES}/{workspace['id']}/imports",
+        data={"source_name": "orders"},
+        files={"file": ("orders.csv", ORDERS_CSV, "text/csv")},
+        headers=_csrf(owner),
+    )
+    assert imported.status_code == 201
     # The run lives in a second workspace: a workspace with runs cannot be deleted yet,
     # and the reviewer-only test deletes the victim workspace.
     run_workspace = _workspace(owner, org["id"])
@@ -141,6 +163,7 @@ def victim():
         analyst=analyst,
         org_id=org["id"],
         workspace_id=workspace["id"],
+        import_id=imported.json()["id"],
         run_id=reconciled.json()["id"],
         owner_id=owner_user["id"],
         analyst_id=analyst_user["id"],
@@ -178,7 +201,12 @@ def _snapshot(victim) -> tuple:
             .where(OrganizationMembership.organization_id == victim.org_id)
             .order_by(OrganizationMembership.user_id)
         ).all()
-    return organization, workspaces, memberships
+        imports = db.execute(
+            select(ImportBatch.id, ImportBatch.status, ImportBatch.rows_total)
+            .where(ImportBatch.workspace_id == victim.workspace_id)
+            .order_by(ImportBatch.id)
+        ).all()
+    return organization, workspaces, memberships, imports
 
 
 def test_public_allowlist_names_real_routes():
@@ -209,11 +237,12 @@ def test_another_organization_gets_404_and_its_data_is_unchanged(method, path, v
         "organization_id": victim.org_id,
         "workspace_id": victim.workspace_id,
         "user_id": victim.analyst_id,
+        "import_id": victim.import_id,
         "run_id": victim.run_id,
     }
     body = TENANT_BODIES[(method, path)](victim) if (method, path) in TENANT_BODIES else None
 
-    response = attacker.request(method, _path(path, ids), json=body, headers=_csrf(attacker))
+    response = _send(attacker, method, path, _path(path, ids), _csrf(attacker), body)
 
     assert response.status_code == 404
     assert _snapshot(victim) == before

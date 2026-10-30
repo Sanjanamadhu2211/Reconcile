@@ -43,7 +43,7 @@ python scripts/restore_db.py --dump backups/reconcile-20260101T000000Z.dump --ta
 
 ## Benchmark
 
-Run the **Database benchmark** workflow manually from GitHub Actions. It runs the 10,000- and 100,000-order profiles against a temporary PostgreSQL database, then prints the JSON reports in the job log. The temporary database is discarded with the job. The benchmark leaves its organization, user, and append-only audit events in the database it uses, so do not point it at a shared or production database.
+The **Database benchmark** workflow runs when its configuration changes on `dev`. After the workflow is present on GitHub's default branch, it can also be started manually from GitHub Actions. It runs the 10,000- and 100,000-order profiles against a temporary PostgreSQL database, then prints the JSON reports in the job log. The temporary database is discarded with the job. The benchmark leaves its organization, user, and append-only audit events in the database it uses, so do not point it at a shared or production database.
 
 Record the runner, Python and PostgreSQL versions with the measured import and reconciliation throughput and match accuracy. Results are specific to the runner and should not be treated as a production capacity guarantee.
 

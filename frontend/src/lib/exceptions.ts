@@ -106,7 +106,7 @@ export function matchesRequestQuery(filters: MatchFilters) {
 }
 
 // One extra row tells the page whether a next page exists; the counts are not returned by the API.
-function pageWindow(page: number) {
+export function pageWindow(page: number) {
   return { limit: PAGE_SIZE + 1, offset: (page - 1) * PAGE_SIZE };
 }
 
@@ -146,11 +146,11 @@ function completedAt(run: ReconciliationRunSummary): number {
   return Date.parse(run.completed_at ?? "") || 0;
 }
 
-function parsePage(value: string | null): number {
+export function parsePage(value: string | null): number {
   const page = Number(value);
   return Number.isInteger(page) && page >= 1 ? page : 1;
 }
 
-function pick<T extends string>(allowed: readonly T[], value: string | null): T | "" {
+export function pick<T extends string>(allowed: readonly T[], value: string | null): T | "" {
   return allowed.find((item) => item === value) ?? "";
 }

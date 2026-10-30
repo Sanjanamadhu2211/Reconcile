@@ -57,6 +57,9 @@ export default function AppShell({ children }: AppShellProps) {
             <Link href="/workspaces" className="nav-link">
               Workspaces
             </Link>
+            <Link href="/audit" className="nav-link">
+              Audit
+            </Link>
           </nav>
           {user && (
             <div className="app-user">

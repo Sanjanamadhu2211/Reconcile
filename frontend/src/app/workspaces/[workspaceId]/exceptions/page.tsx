@@ -6,6 +6,7 @@ import { useParams, usePathname, useRouter, useSearchParams } from "next/navigat
 import AppShell from "@/components/AppShell";
 import ExceptionFilterBar from "@/components/exceptions/ExceptionFilterBar";
 import ExceptionTable from "@/components/exceptions/ExceptionTable";
+import ExportLinks from "@/components/ExportLinks";
 import Pagination from "@/components/exceptions/Pagination";
 import RunSummary from "@/components/exceptions/RunSummary";
 import styles from "@/components/exceptions/exceptions.module.css";
@@ -130,6 +131,7 @@ function ExceptionQueue() {
     <div className={styles.page}>
       <h1>Exceptions</h1>
       <RunSummary workspaceId={workspaceId} run={run} active="exceptions" />
+      <ExportLinks workspaceId={workspaceId} />
       <ExceptionFilterBar
         filters={filters}
         onFilterChange={updateFilters}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { use, useCallback, useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
+import ExportLinks from "@/components/ExportLinks";
 import { errorText } from "@/lib/errors";
 import {
   createReconciliationRun,
@@ -98,6 +99,11 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
                 </p>
               )}
             </div>
+          </section>
+
+          <section className="card">
+            <h2 className="card-title">Exports</h2>
+            <ExportLinks workspaceId={workspaceId} />
           </section>
 
           <section className="table-section">

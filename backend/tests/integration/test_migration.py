@@ -13,7 +13,39 @@ from app.models import Base
 
 pytestmark = pytest.mark.integration
 
-TABLES = {"users", "organizations", "organization_memberships", "workspaces", "sessions"}
+TABLES = {
+    "users",
+    "organizations",
+    "organization_memberships",
+    "workspaces",
+    "sessions",
+    "import_batches",
+    "import_rows",
+    "transactions",
+}
+
+
+BATCH_INSERT = text(
+    """
+    INSERT INTO import_batches (
+        organization_id, workspace_id, source_name, file_size_bytes, file_checksum, idempotency_key
+    )
+    VALUES (:org_id, :workspace_id, 'orders', 10, :checksum, :idempotency_key)
+    RETURNING id
+    """
+)
+TRANSACTION_INSERT = text(
+    """
+    INSERT INTO transactions (
+        organization_id, workspace_id, import_batch_id, source_name, external_id,
+        amount, currency, transaction_type, occurred_at
+    )
+    VALUES (
+        :org_id, :workspace_id, :batch_id, 'orders', :external_id,
+        100.00, :currency, 'payment', now()
+    )
+    """
+)
 
 
 def _table_names() -> set[str]:
@@ -94,3 +126,51 @@ def test_models_match_the_migrated_schema():
         diff = compare_metadata(MigrationContext.configure(conn), Base.metadata)
 
     assert diff == []
+
+
+def test_import_and_transaction_constraints():
+    command.upgrade(Config("alembic.ini"), "head")
+
+    with get_engine().begin() as conn:
+        org_id = conn.execute(
+            text("INSERT INTO organizations (name) VALUES ('Imports org') RETURNING id")
+        ).scalar_one()
+        workspace_id = conn.execute(
+            text(
+                "INSERT INTO workspaces (organization_id, name) "
+                "VALUES (:org_id, 'Imports') RETURNING id"
+            ),
+            {"org_id": org_id},
+        ).scalar_one()
+
+        batch = {
+            "org_id": org_id,
+            "workspace_id": workspace_id,
+            "checksum": "abc123",
+            "idempotency_key": None,
+        }
+        conn.execute(BATCH_INSERT, batch)
+        conn.execute(BATCH_INSERT, {**batch, "checksum": "def456"})
+        batch_id = conn.execute(
+            BATCH_INSERT, {**batch, "checksum": "ghi789", "idempotency_key": "key-1"}
+        ).scalar_one()
+
+        transaction = {
+            "org_id": org_id,
+            "workspace_id": workspace_id,
+            "batch_id": batch_id,
+            "external_id": "PAY-001",
+            "currency": "USD",
+        }
+        conn.execute(TRANSACTION_INSERT, transaction)
+
+    rejected = [
+        (BATCH_INSERT, {**batch, "checksum": "abc123"}),
+        (BATCH_INSERT, {**batch, "checksum": "jkl012", "idempotency_key": "key-1"}),
+        (BATCH_INSERT, {**batch, "checksum": "mno345", "org_id": None}),
+        (TRANSACTION_INSERT, transaction),
+        (TRANSACTION_INSERT, {**transaction, "external_id": "PAY-002", "currency": "usd"}),
+    ]
+    for statement, params in rejected:
+        with pytest.raises(IntegrityError), get_engine().begin() as conn:
+            conn.execute(statement, params)

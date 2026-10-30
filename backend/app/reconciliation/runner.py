@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 import uuid
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -14,6 +15,7 @@ from app.models import Match as MatchRow
 from app.reconciliation.engine import MatchingResult, Record, run_matching
 
 logger = logging.getLogger(__name__)
+metrics = logging.getLogger("reconcile.metrics")
 
 RULE_VERSION = "1"
 RUN_STALE_AFTER = timedelta(minutes=10)
@@ -202,12 +204,37 @@ def _fail_run(session_factory: sessionmaker[Session], run_id: uuid.UUID) -> None
         )
 
 
+def _rate(part: int, total: int) -> str | None:
+    return f"{part / total:.4f}" if total else None
+
+
+def _log_run_finished(session_factory: sessionmaker[Session], run_id: uuid.UUID, started: float):
+    with session_factory() as session:
+        run = session.get(ReconciliationRun, run_id)
+    # Rates are shares of this run's outcomes: matched records against matched plus exceptions
+    outcomes = run.matches_count + run.exceptions_count
+    metrics.info(
+        "reconciliation finished",
+        extra={
+            "event": "reconciliation_finished",
+            "run_id": str(run.id),
+            "status": run.status,
+            "duration_ms": round((time.perf_counter() - started) * 1000, 2),
+            "matches": run.matches_count,
+            "exceptions": run.exceptions_count,
+            "match_rate": _rate(run.matches_count, outcomes),
+            "exception_rate": _rate(run.exceptions_count, outcomes),
+        },
+    )
+
+
 def run_reconciliation(
     session_factory: sessionmaker[Session],
     *,
     workspace_id: uuid.UUID,
     user_id: uuid.UUID | None,
 ) -> ReconciliationRun:
+    started = time.perf_counter()
     run_id, organization_id, tolerance_hours = _start_run(session_factory, workspace_id, user_id)
     try:
         with session_factory() as session:
@@ -218,6 +245,8 @@ def run_reconciliation(
         logger.exception("Reconciliation run %s failed", run_id)
         _fail_run(session_factory, run_id)
         raise
+    finally:
+        _log_run_finished(session_factory, run_id, started)
 
     with session_factory() as session:
         return session.get(ReconciliationRun, run_id)

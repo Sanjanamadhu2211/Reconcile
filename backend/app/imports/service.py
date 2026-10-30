@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import io
+import logging
 import sys
+import time
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import BinaryIO
@@ -20,6 +22,7 @@ from app.models import ImportBatch, ImportRow, Transaction, User, Workspace
 from .checksum import check_size, sha256_hex
 from .reader import ImportFileError, RowResult, read_rows
 
+metrics = logging.getLogger("reconcile.metrics")
 STALE_AFTER = timedelta(minutes=5)
 CLAIMABLE = or_(
     ImportBatch.status.in_(("pending", "failed")),
@@ -244,6 +247,26 @@ def _summary(exc: Exception) -> str:
     return "Unexpected error while importing the file"
 
 
+def _log_import_finished(
+    session_factory: sessionmaker[Session], batch_id: UUID, started: float
+) -> None:
+    with session_factory() as session:
+        batch = session.get(ImportBatch, batch_id)
+    duration = time.perf_counter() - started
+    metrics.info(
+        "import finished",
+        extra={
+            "event": "import_finished",
+            "batch_id": str(batch.id),
+            "status": batch.status,
+            "duration_ms": round(duration * 1000, 2),
+            "rows_total": batch.rows_total,
+            "rows_failed": batch.rows_failed,
+            "rows_per_second": round(batch.rows_total / duration, 2) if duration > 0 else None,
+        },
+    )
+
+
 def process_batch(
     session_factory: sessionmaker[Session],
     batch_id: UUID,
@@ -261,6 +284,7 @@ def process_batch(
             return current
         raise BatchBusy("Batch is being processed by another worker")
 
+    started = time.perf_counter()
     read_cap = sys.maxsize if max_rows is None else max_rows
     pending: list[RowResult] = []
     seen = 0
@@ -281,6 +305,8 @@ def process_batch(
     except Exception as exc:
         _finish_batch(session_factory, batch, actor, status="failed", error_summary=_summary(exc))
         raise
+    finally:
+        _log_import_finished(session_factory, batch_id, started)
 
     with session_factory() as session:
         return session.get(ImportBatch, batch_id)

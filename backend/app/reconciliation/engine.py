@@ -6,10 +6,6 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-# ──────────────────────────────
-# Public data structures
-# ──────────────────────────────
-
 
 @dataclass(frozen=True, slots=True)
 class Record:
@@ -49,10 +45,6 @@ class MatchingResult:
     matches: tuple[Match, ...]
     exceptions: tuple[ExceptionItem, ...]
 
-
-# ──────────────────────────────
-# Internal helpers
-# ──────────────────────────────
 
 _PAIRINGS = (
     ("orders", "payments"),
@@ -104,11 +96,6 @@ def _group_by_amount_currency(records: list[Record]) -> dict[tuple[Decimal, str]
     return groups
 
 
-# ──────────────────────────────
-# Core matching logic
-# ──────────────────────────────
-
-
 def _match_pairing(
     left_records: list[Record],
     right_records: list[Record],
@@ -135,7 +122,7 @@ def _match_pairing(
     left_nondup = [r for r in left_records if not r.is_duplicate]
     right_nondup = [r for r in right_records if not r.is_duplicate]
 
-    # ── Rule 1: exact external_id ──
+    # rule 1: exact external_id
     left_by_ext_id = _group_by_external_id(left_nondup)
     right_by_ext_id = _group_by_external_id(right_nondup)
 
@@ -184,7 +171,7 @@ def _match_pairing(
             )
             right_amount_mismatch.add(right.key)
 
-    # ── Rule 2: amount + currency + time tolerance ──
+    # rule 2: amount, currency and time tolerance
     # Consider only left records not yet matched/ambiguous/amount_mismatch
     # and right records not yet matched/ambiguous/amount_mismatch
     left_unmatched = [
@@ -373,10 +360,6 @@ def run_matching(
 
     return MatchingResult(tuple(all_matches), tuple(final_exceptions))
 
-
-# ──────────────────────────────
-# Public exports
-# ──────────────────────────────
 
 __all__ = [
     "Record",

@@ -65,7 +65,7 @@ def login(
     return user
 
 
-@router.post("/logout", dependencies=[Depends(require_csrf)])
+@router.post("/logout", dependencies=[Depends(get_current_user), Depends(require_csrf)])
 def logout(
     response: Response,
     db: Annotated[Session, Depends(get_db)],

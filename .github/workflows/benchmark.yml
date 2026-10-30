@@ -1,0 +1,50 @@
+name: Database benchmark
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: database-benchmark-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: reconcile_benchmark
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    env:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/reconcile_benchmark
+      SESSION_SECRET: benchmark-only-session-secret-not-used-for-production
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+      - run: pip install -e .
+        working-directory: backend
+      - run: python -m alembic upgrade head
+        working-directory: backend
+      - name: Run 10,000 and 100,000 order benchmarks
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/benchmark.py --rows 10000 --json
+          python scripts/benchmark.py --rows 100000 --json
+        working-directory: backend

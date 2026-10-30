@@ -9,6 +9,8 @@ NEW_TABLES = (
     "reconciliation_runs",
     "matches",
     "exceptions",
+    "resolutions",
+    "audit_events",
 )
 
 
@@ -20,7 +22,7 @@ def _index_names(table_name: str) -> set[str]:
     return {index.name for index in Base.metadata.tables[table_name].indexes}
 
 
-def test_metadata_has_the_eleven_tables():
+def test_metadata_has_the_thirteen_tables():
     assert set(Base.metadata.tables) == {
         "users",
         "organizations",
@@ -33,7 +35,29 @@ def test_metadata_has_the_eleven_tables():
         "reconciliation_runs",
         "matches",
         "exceptions",
+        "resolutions",
+        "audit_events",
     }
+
+
+def test_audit_action_check_lists_every_action():
+    check = next(
+        constraint
+        for constraint in Base.metadata.tables["audit_events"].constraints
+        if constraint.name == "ck_audit_events_action"
+    )
+    sql = str(check.sqltext)
+
+    for action in (
+        "import.created",
+        "import.completed",
+        "import.failed",
+        "exception.proposed",
+        "exception.approved",
+        "exception.rejected",
+        "exception.reopened",
+    ):
+        assert f"'{action}'" in sql
 
 
 def test_constraint_names_follow_the_convention():

@@ -25,6 +25,8 @@ TABLES = {
     "reconciliation_runs",
     "matches",
     "exceptions",
+    "resolutions",
+    "audit_events",
 }
 
 

@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
       
       # Setup backend
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         if: hashFiles('backend/app/openapi_export.py') != '' && hashFiles('frontend/package.json') != ''
         with:
           python-version: '3.12'

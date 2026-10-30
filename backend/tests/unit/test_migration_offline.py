@@ -14,6 +14,9 @@ TABLES = (
     "import_batches",
     "import_rows",
     "transactions",
+    "reconciliation_runs",
+    "matches",
+    "exceptions",
 )
 
 
@@ -26,7 +29,7 @@ def offline_config(monkeypatch):
     get_settings.cache_clear()
 
 
-def test_offline_upgrade_creates_the_eight_tables(offline_config, capsys):
+def test_offline_upgrade_creates_the_eleven_tables(offline_config, capsys):
     command.upgrade(offline_config, "head", sql=True)
 
     sql = capsys.readouterr().out
@@ -34,7 +37,7 @@ def test_offline_upgrade_creates_the_eight_tables(offline_config, capsys):
         assert f"CREATE TABLE {table} (" in sql
 
 
-def test_offline_downgrade_drops_the_eight_tables(offline_config, capsys):
+def test_offline_downgrade_drops_the_eleven_tables(offline_config, capsys):
     command.downgrade(offline_config, "head:base", sql=True)
 
     sql = capsys.readouterr().out

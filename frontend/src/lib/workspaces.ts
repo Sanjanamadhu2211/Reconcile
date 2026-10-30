@@ -7,6 +7,7 @@ export type WorkspaceCreate = components["schemas"]["WorkspaceCreate"];
 export type OrganizationOut = components["schemas"]["OrganizationOut"];
 export type ReconciliationRunSummary = components["schemas"]["ReconciliationRunSummary"];
 export type ReconciliationRunOut = components["schemas"]["ReconciliationRunOut"];
+export type WorkspaceSummary = components["schemas"]["WorkspaceSummary"];
 
 export const DEFAULT_TOLERANCE_HOURS = 24;
 
@@ -56,6 +57,14 @@ export async function listReconciliationRuns(
     "/api/v1/workspaces/{workspace_id}/reconciliation-runs",
     { params: { path: { workspace_id: workspaceId }, query: { limit } } },
   );
+  if (!response.ok || !data) throw new Error(apiErrorMessage(error));
+  return data;
+}
+
+export async function getWorkspaceSummary(workspaceId: string): Promise<WorkspaceSummary> {
+  const { data, error, response } = await api.GET("/api/v1/workspaces/{workspace_id}/summary", {
+    params: { path: { workspace_id: workspaceId } },
+  });
   if (!response.ok || !data) throw new Error(apiErrorMessage(error));
   return data;
 }

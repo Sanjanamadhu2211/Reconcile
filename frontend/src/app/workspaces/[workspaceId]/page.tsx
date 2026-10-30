@@ -3,15 +3,18 @@
 import Link from "next/link";
 import { use, useCallback, useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
+import DashboardSummary from "@/components/dashboard/DashboardSummary";
 import ExportLinks from "@/components/ExportLinks";
 import { errorText } from "@/lib/errors";
 import {
   createReconciliationRun,
   getWorkspace,
+  getWorkspaceSummary,
   listReconciliationRuns,
   type ReconciliationRunOut,
   type ReconciliationRunSummary,
   type WorkspaceOut,
+  type WorkspaceSummary,
 } from "@/lib/workspaces";
 
 interface WorkspacePageProps {
@@ -26,6 +29,17 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
   const [running, setRunning] = useState(false);
   const [runResult, setRunResult] = useState<ReconciliationRunOut | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<WorkspaceSummary | null>(null);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+
+  const loadSummary = useCallback(async () => {
+    setSummaryError(null);
+    try {
+      setSummary(await getWorkspaceSummary(workspaceId));
+    } catch (err) {
+      setSummaryError(errorText(err));
+    }
+  }, [workspaceId]);
 
   const load = useCallback(async () => {
     setError(null);
@@ -48,6 +62,7 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
     try {
       setRunResult(await createReconciliationRun(workspaceId));
       setRuns(await listReconciliationRuns(workspaceId));
+      await loadSummary();
     } catch (err) {
       setRunError(errorText(err));
     } finally {
@@ -57,7 +72,8 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
 
   useEffect(() => {
     load();
-  }, [load]);
+    loadSummary();
+  }, [load, loadSummary]);
 
   return (
     <AppShell>
@@ -84,6 +100,13 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
             </div>
           </div>
           <p>Timestamp tolerance: {workspace.timestamp_tolerance_hours} hours</p>
+
+          <DashboardSummary
+            workspaceId={workspaceId}
+            summary={summary}
+            error={summaryError}
+            onRetry={loadSummary}
+          />
 
           <section className="card">
             <h2 className="card-title">Reconciliation</h2>

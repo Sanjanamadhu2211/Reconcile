@@ -15,6 +15,8 @@ dependencies = [
     "pydantic-settings",
     "argon2-cffi",
     "email-validator",
+    "authlib",
+    "httpx",
 ]
 
 [project.optional-dependencies]

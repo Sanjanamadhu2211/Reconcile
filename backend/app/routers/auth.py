@@ -5,22 +5,22 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.auth.cookies import SESSION_COOKIE, clear_auth_cookies, set_auth_cookies
+from app.auth.cookies import (
+    SESSION_COOKIE,
+    clear_auth_cookies,
+    secure_cookies,
+    set_auth_cookies,
+)
 from app.auth.csrf import require_csrf
 from app.auth.dependencies import get_current_user
 from app.auth.passwords import hash_password, verify_password
 from app.auth.rate_limit import login_limiter
 from app.auth.sessions import create_session, delete_session
-from app.config import get_settings
 from app.db import get_db
 from app.models import User
 from app.schemas.auth import LoginRequest, RegisterRequest, UserOut
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
-
-
-def _secure_cookies() -> bool:
-    return get_settings().env != "development"
 
 
 @router.post("/register", status_code=201, response_model=UserOut)
@@ -37,7 +37,7 @@ def register(
         db.rollback()
         raise HTTPException(status_code=409, detail="Email already registered") from None
 
-    set_auth_cookies(response, create_session(db, user), secure=_secure_cookies())
+    set_auth_cookies(response, create_session(db, user), secure=secure_cookies())
     return user
 
 
@@ -61,7 +61,7 @@ def login(
         login_limiter.record_failure(key)
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    set_auth_cookies(response, create_session(db, user), secure=_secure_cookies())
+    set_auth_cookies(response, create_session(db, user), secure=secure_cookies())
     return user
 
 
@@ -73,7 +73,7 @@ def logout(
 ):
     if session_token:
         delete_session(db, session_token)
-    clear_auth_cookies(response, secure=_secure_cookies())
+    clear_auth_cookies(response, secure=secure_cookies())
     return {}
 
 

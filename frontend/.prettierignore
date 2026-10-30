@@ -1,0 +1,4 @@
+.next
+node_modules
+bun.lock
+src/lib/api/schema.d.ts

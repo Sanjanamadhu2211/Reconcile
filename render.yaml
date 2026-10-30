@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: reconcile-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /health
+    preDeployCommand: python -m alembic upgrade head
+    envVars:
+      - key: ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_DIRECT_URL
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: WEB_ORIGIN
+        sync: false
+      - key: TRUSTED_PROXY_COUNT
+        value: "0"

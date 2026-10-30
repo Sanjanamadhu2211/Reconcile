@@ -1,0 +1,41 @@
+from fastapi import FastAPI
+
+from app.logging import add_request_logging, configure_logging
+from app.routers import (
+    audit,
+    auth,
+    exceptions,
+    exports,
+    google_auth,
+    health,
+    imports,
+    organizations,
+    reconciliation_results,
+    reconciliation_runs,
+    summary,
+    workspaces,
+)
+from app.security import add_security_headers
+
+
+def create_app() -> FastAPI:
+    configure_logging()
+    app = FastAPI(title="Reconcile")
+    add_security_headers(app)
+    add_request_logging(app)
+    app.include_router(health.router)
+    app.include_router(auth.router)
+    app.include_router(google_auth.router)
+    app.include_router(organizations.router)
+    app.include_router(workspaces.router)
+    app.include_router(summary.router)
+    app.include_router(imports.router)
+    app.include_router(reconciliation_results.router)
+    app.include_router(reconciliation_runs.router)
+    app.include_router(exceptions.router)
+    app.include_router(audit.router)
+    app.include_router(exports.router)
+    return app
+
+
+app = create_app()

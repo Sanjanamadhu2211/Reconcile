@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reconcile-backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.162,<0.163",
+    "uvicorn[standard]",
+    "sqlalchemy>=2",
+    "psycopg[binary]>=3.2",
+    "alembic",
+    "pydantic-settings",
+    "argon2-cffi",
+    "email-validator",
+    "authlib",
+    "httpx",
+    "python-multipart",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov", "httpx", "ruff", "pip-audit"]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.ruff]
+line-length = 100
+extend-exclude = ["tests/fixtures"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = ["integration: needs the real Postgres database"]

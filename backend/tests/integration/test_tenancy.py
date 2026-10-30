@@ -1,9 +1,16 @@
 import uuid
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
+from app.auth.permissions import load_membership
 from app.main import app
+from app.models import User
+from app.routers.organizations import (
+    _keep_a_reviewer,
+    _locked_membership,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -241,3 +248,24 @@ def test_pagination_limits_are_enforced():
     assert client.get(ORGANIZATIONS, params={"limit": 101}).status_code == 422
     assert client.get(WORKSPACES, params={"limit": 0}).status_code == 422
     assert client.get(ORGANIZATIONS, params={"offset": -1}).status_code == 422
+
+
+def test_last_reviewer_guard_counts_roles_committed_after_they_were_loaded(db):
+    owner, owner_user = _signed_in_client()
+    org = _create_org(owner)
+    _, second_user = _signed_in_client()
+    _add_member(owner, org["id"], second_user["email"], "reviewer")
+    loaded = load_membership(db, db.get(User, uuid.UUID(second_user["id"])), uuid.UUID(org["id"]))
+    assert loaded.role == "reviewer"
+
+    demoted = owner.patch(
+        f"{ORGANIZATIONS}/{org['id']}/members/{second_user['id']}",
+        json={"role": "analyst"},
+        headers=_csrf(owner),
+    )
+    members, target = _locked_membership(db, uuid.UUID(org["id"]), uuid.UUID(owner_user["id"]))
+
+    assert demoted.status_code == 200
+    with pytest.raises(HTTPException) as error:
+        _keep_a_reviewer(members, target)
+    assert error.value.status_code == 409

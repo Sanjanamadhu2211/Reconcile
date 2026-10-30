@@ -37,6 +37,7 @@ def _locked_membership(
             .where(OrganizationMembership.organization_id == organization_id)
             .order_by(OrganizationMembership.id)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
     )
     target = next((member for member in members if member.user_id == user_id), None)

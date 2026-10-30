@@ -307,10 +307,74 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List Reconciliation Runs
+         * @description List reconciliation runs for a workspace, newest first.
+         */
+        get: operations["list_reconciliation_runs_api_v1_workspaces__workspace_id__reconciliation_runs_get"];
         put?: never;
         /** Create Reconciliation Run */
         post: operations["create_reconciliation_run_api_v1_workspaces__workspace_id__reconciliation_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reconciliation-runs/{run_id}/matches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Matches
+         * @description List matches for a reconciliation run with optional rule filter.
+         */
+        get: operations["list_matches_api_v1_reconciliation_runs__run_id__matches_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reconciliation-runs/{run_id}/exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Exceptions
+         * @description List exceptions for a reconciliation run with filters.
+         */
+        get: operations["list_exceptions_api_v1_reconciliation_runs__run_id__exceptions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exceptions/{exception_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Exception
+         * @description Get a single exception with its details.
+         */
+        get: operations["get_exception_api_v1_exceptions__exception_id__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -338,6 +402,59 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ExceptionImportRowSummary */
+        ExceptionImportRowSummary: {
+            /** Row Number */
+            row_number: number;
+            /**
+             * Batch Id
+             * Format: uuid
+             */
+            batch_id: string;
+        };
+        /** ExceptionItem */
+        ExceptionItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Category */
+            category: string;
+            /** Status */
+            status: string;
+            /** Version */
+            version: number;
+            /** Assigned Reviewer Id */
+            assigned_reviewer_id: string | null;
+            /** Details */
+            details: {
+                [key: string]: unknown;
+            } | null;
+            transaction?: components["schemas"]["ExceptionTransactionSummary"] | null;
+            import_row?: components["schemas"]["ExceptionImportRowSummary"] | null;
+            /**
+             * Reconciliation Run Id
+             * Format: uuid
+             */
+            reconciliation_run_id: string;
+        };
+        /** ExceptionTransactionSummary */
+        ExceptionTransactionSummary: {
+            /** Source Name */
+            source_name: string;
+            /** External Id */
+            external_id: string;
+            /** Amount */
+            amount: string;
+            /** Currency */
+            currency: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -418,6 +535,18 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** MatchItem */
+        MatchItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Rule */
+            rule: string;
+            left_transaction: components["schemas"]["TransactionSummary"];
+            right_transaction: components["schemas"]["TransactionSummary"];
+        };
         /** MemberAdd */
         MemberAdd: {
             /**
@@ -492,6 +621,28 @@ export interface components {
              */
             created_at: string;
         };
+        /** ReconciliationRunSummary */
+        ReconciliationRunSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Status */
+            status: string;
+            /** Rule Version */
+            rule_version: string;
+            /** Tolerance Hours */
+            tolerance_hours: number;
+            /** Matches Count */
+            matches_count: number;
+            /** Exceptions Count */
+            exceptions_count: number;
+            /** Started At */
+            started_at: string | null;
+            /** Completed At */
+            completed_at: string | null;
+        };
         /** RegisterRequest */
         RegisterRequest: {
             /**
@@ -507,6 +658,22 @@ export interface components {
          * @enum {string}
          */
         Role: "analyst" | "reviewer";
+        /** TransactionSummary */
+        TransactionSummary: {
+            /** Source Name */
+            source_name: string;
+            /** External Id */
+            external_id: string;
+            /** Amount */
+            amount: string;
+            /** Currency */
+            currency: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+        };
         /** UserOut */
         UserOut: {
             /**
@@ -1403,6 +1570,42 @@ export interface operations {
             };
         };
     };
+    list_reconciliation_runs_api_v1_workspaces__workspace_id__reconciliation_runs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: {
+                session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationRunSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_reconciliation_run_api_v1_workspaces__workspace_id__reconciliation_runs_post: {
         parameters: {
             query?: never;
@@ -1426,6 +1629,116 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReconciliationRunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_matches_api_v1_reconciliation_runs__run_id__matches_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                rule?: string | null;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: {
+                session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_exceptions_api_v1_reconciliation_runs__run_id__exceptions_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                category?: string | null;
+                status?: string | null;
+                source_name?: string | null;
+                q?: string | null;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: {
+                session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExceptionItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_exception_api_v1_exceptions__exception_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exception_id: string;
+            };
+            cookie?: {
+                session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExceptionItem"];
                 };
             };
             /** @description Validation Error */

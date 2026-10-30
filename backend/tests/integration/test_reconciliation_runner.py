@@ -142,10 +142,6 @@ def test_persisted_exceptions_match_golden_fixtures(golden_workspace):
     assert {row for row in exceptions if row[0] != "duplicate"} == expected_non_duplicate
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="in-file duplicate import rows store an empty payload, so no Record can be built",
-)
 def test_persisted_duplicate_exceptions_match_golden_fixtures(golden_workspace):
     run = _run(golden_workspace)
 

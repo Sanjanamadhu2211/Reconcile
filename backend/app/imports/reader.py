@@ -189,18 +189,6 @@ def read_rows(
                 )
                 continue
 
-            # Check for duplicate
-            if external_id in seen_external_ids:
-                yield RowResult(
-                    row_number=line_number,
-                    status="DUPLICATE_IN_FILE",
-                    error_code="DUPLICATE_IN_FILE",
-                    error_detail=f"Duplicate external_id in file: {external_id}",
-                    values=None,
-                )
-                continue
-            seen_external_ids.add(external_id)
-
             # Parse amount
             try:
                 amount_decimal = parse_money(raw_values.get("amount", ""))
@@ -245,7 +233,28 @@ def read_rows(
             # Reference (optional)
             reference = raw_values.get("reference", "").strip() or None
 
-            # All validations passed
+            # All validations passed - now check for duplicate
+            if external_id in seen_external_ids:
+                yield RowResult(
+                    row_number=line_number,
+                    status="DUPLICATE_IN_FILE",
+                    error_code="DUPLICATE_IN_FILE",
+                    error_detail=f"Duplicate external_id in file: {external_id}",
+                    values={
+                        "source_name": layout.source_name,
+                        "external_id": external_id,
+                        "amount": amount_str,
+                        "currency": currency,
+                        "transaction_type": layout.transaction_type,
+                        "reference": reference or "",
+                        "occurred_at": occurred_at_str,
+                    },
+                )
+                continue
+
+            seen_external_ids.add(external_id)
+
+            # All validations passed, not a duplicate
             yield RowResult(
                 row_number=line_number,
                 status="VALID",

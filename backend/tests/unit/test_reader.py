@@ -110,6 +110,11 @@ ORD-001,200.00,USD,2024-01-15T10:30:00Z,CUST-002
         assert results[0].status == "VALID"
         assert results[1].status == "DUPLICATE_IN_FILE"
         assert results[1].error_code == "DUPLICATE_IN_FILE"
+        # Duplicate rows should still carry their normalized values
+        assert results[1].values is not None
+        assert results[1].values["external_id"] == "ORD-001"
+        assert results[1].values["amount"] == "200.0000"
+        assert results[1].values["currency"] == "USD"
 
     def test_too_many_rows(self):
         csv_content = b"order_id,amount,currency,order_date,customer_id\n"

@@ -176,7 +176,7 @@ def _insert_chunk(session: Session, batch: Row, rows: list[RowResult], seen: int
                 "organization_id": batch.organization_id,
                 "import_batch_id": batch.id,
                 "row_number": row.row_number,
-                "payload": row.values or {},
+                "payload": row.values if row.values is not None else {},
                 "validation_status": status,
                 "error_code": error_code,
                 "error_detail": error_detail,

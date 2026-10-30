@@ -26,6 +26,12 @@ from .reader import (
     RowResult,
     read_rows,
 )
+from .service import (
+    BatchBusy,
+    IdempotencyConflict,
+    create_or_get_batch,
+    process_batch,
+)
 
 __all__ = [
     # normalize
@@ -50,4 +56,9 @@ __all__ = [
     # checksum
     "check_size",
     "sha256_hex",
+    # service
+    "create_or_get_batch",
+    "process_batch",
+    "BatchBusy",
+    "IdempotencyConflict",
 ]

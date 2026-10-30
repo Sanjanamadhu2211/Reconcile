@@ -3,11 +3,7 @@ from __future__ import annotations
 import hashlib
 from typing import BinaryIO
 
-
-class ImportFileError(Exception):
-    """File-level error during import (encoding, size, row cap)."""
-
-    pass
+from .reader import ImportFileError
 
 
 def check_size(size_bytes: int, max_mb: int) -> None:

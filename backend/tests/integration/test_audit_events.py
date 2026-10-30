@@ -117,10 +117,13 @@ def test_update_delete_and_truncate_are_rejected_for_the_owner():
 def test_app_role_can_insert_and_select_but_not_update_or_delete():
     org_id = _organization_id()
     login_role = f"audit_login_{uuid.uuid4().hex}"
+    login_password = uuid.uuid4().hex
     with get_engine().begin() as conn:
-        conn.execute(text(f"CREATE ROLE {login_role} LOGIN"))
+        conn.execute(text(f"CREATE ROLE {login_role} LOGIN PASSWORD '{login_password}'"))
         conn.execute(text(f"GRANT reconcile_app TO {login_role}"))
-    app_engine = create_engine(make_url(get_settings().database_url).set(username=login_role))
+    app_engine = create_engine(
+        make_url(get_settings().database_url).set(username=login_role, password=login_password)
+    )
 
     try:
         with app_engine.begin() as conn:

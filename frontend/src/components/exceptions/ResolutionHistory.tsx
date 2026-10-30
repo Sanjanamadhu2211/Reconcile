@@ -12,6 +12,7 @@ interface ResolutionHistoryProps {
 export default function ResolutionHistory({ exceptionId, version }: ResolutionHistoryProps) {
   const [history, setHistory] = useState<ResolutionOut[]>();
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   // The version changes with every decision, so the timeline reloads after each action.
   useEffect(() => {
@@ -32,15 +33,24 @@ export default function ResolutionHistory({ exceptionId, version }: ResolutionHi
     return () => {
       ignore = true;
     };
-  }, [exceptionId, version]);
+  }, [exceptionId, version, attempt]);
 
   return (
     <section className={styles.panel} aria-labelledby="exception-history-heading">
       <h2 id="exception-history-heading">History</h2>
       {error && (
-        <p className={styles.error} role="alert">
-          {error}
-        </p>
+        <>
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+          <button
+            type="button"
+            className={styles.button}
+            onClick={() => setAttempt((current) => current + 1)}
+          >
+            Retry
+          </button>
+        </>
       )}
       {!error && history === undefined && <p className={styles.muted}>Loading history…</p>}
       {history?.length === 0 && <p className={styles.muted}>No decisions yet.</p>}

@@ -27,7 +27,7 @@
     "openapi-fetch": "^0.17.0",
     "openapi-typescript": "^7.13.0",
     "prettier": "latest",
-    "typescript": "^5"
+    "typescript": "^7"
   },
   "packageManager": "bun@1.4.0",
   "ignoreScripts": [

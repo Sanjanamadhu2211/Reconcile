@@ -13,6 +13,7 @@ from sqlalchemy.engine import Row
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
+from app import audit
 from app.config import get_settings
 from app.models import ImportBatch, ImportRow, Transaction, User, Workspace
 
@@ -92,6 +93,20 @@ def create_or_get_batch(
     )
     db.add(batch)
     try:
+        db.flush()
+        audit.record(
+            db,
+            organization_id=workspace.organization_id,
+            actor=user,
+            action="import.created",
+            target_type="import_batch",
+            target_id=batch.id,
+            metadata={
+                "source_name": source_name,
+                "filename": filename,
+                "file_size_bytes": size,
+            },
+        )
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -123,12 +138,33 @@ def _claim(session_factory: sessionmaker[Session], batch_id: UUID) -> Row | None
         return session.execute(claim).first()
 
 
-def _update_batch(session_factory: sessionmaker[Session], batch_id: UUID, **values) -> None:
+def _finish_batch(
+    session_factory: sessionmaker[Session], batch: Row, actor: User | None, **values
+) -> None:
+    status = values["status"]
     with session_factory() as session, session.begin():
-        session.execute(
+        final = session.execute(
             update(ImportBatch)
-            .where(ImportBatch.id == batch_id)
+            .where(ImportBatch.id == batch.id)
             .values(updated_at=func.now(), **values)
+            .returning(ImportBatch.rows_total, ImportBatch.rows_processed, ImportBatch.rows_failed)
+        ).one()
+        if status == "completed":
+            metadata = {
+                "rows_total": final.rows_total,
+                "rows_processed": final.rows_processed,
+                "rows_failed": final.rows_failed,
+            }
+        else:
+            metadata = {"error_summary": values["error_summary"]}
+        audit.record(
+            session,
+            organization_id=batch.organization_id,
+            actor=actor,
+            action=f"import.{status}",
+            target_type="import_batch",
+            target_id=batch.id,
+            metadata=metadata,
         )
 
 
@@ -215,6 +251,7 @@ def process_batch(
     *,
     chunk_size: int = 1000,
     max_rows: int | None,
+    actor: User | None = None,
 ) -> ImportBatch:
     batch = _claim(session_factory, batch_id)
     if batch is None:
@@ -238,11 +275,11 @@ def process_batch(
                 pending = []
         if pending:
             _write_chunk(session_factory, batch, pending, seen)
-        _update_batch(
-            session_factory, batch_id, status="completed", rows_total=seen, error_summary=None
+        _finish_batch(
+            session_factory, batch, actor, status="completed", rows_total=seen, error_summary=None
         )
     except Exception as exc:
-        _update_batch(session_factory, batch_id, status="failed", error_summary=_summary(exc))
+        _finish_batch(session_factory, batch, actor, status="failed", error_summary=_summary(exc))
         raise
 
     with session_factory() as session:

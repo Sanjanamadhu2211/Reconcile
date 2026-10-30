@@ -98,7 +98,7 @@ def _member_batch(db: Session, user: User, import_id: uuid.UUID) -> ImportBatch:
     return batch
 
 
-def _process(db: Session, batch: ImportBatch, stream) -> ImportBatch:
+def _process(db: Session, user: User, batch: ImportBatch, stream) -> ImportBatch:
     batch_id = batch.id
     try:
         return process_batch(
@@ -106,6 +106,7 @@ def _process(db: Session, batch: ImportBatch, stream) -> ImportBatch:
             batch_id,
             stream,
             max_rows=get_settings().max_import_rows,
+            actor=user,
         )
     except ImportFileError as exc:
         db.refresh(batch)
@@ -142,7 +143,7 @@ def _store_upload(
     except ImportFileError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from None
     if batch.status != "completed":
-        batch = _process(db, batch, upload.file)
+        batch = _process(db, user, batch, upload.file)
     return batch, created
 
 

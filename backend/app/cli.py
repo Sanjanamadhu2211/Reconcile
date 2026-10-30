@@ -94,7 +94,9 @@ def main(argv: list[str] | None = None) -> int:
                     return 0
 
                 stream.seek(0)
-                processed = process_batch(session_factory, batch.id, stream, max_rows=None)
+                processed = process_batch(
+                    session_factory, batch.id, stream, max_rows=None, actor=user
+                )
 
                 print(
                     f"Import completed: batch_id={processed.id}, "

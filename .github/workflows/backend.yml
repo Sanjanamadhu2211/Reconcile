@@ -47,6 +47,9 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+    env:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/reconcile_test
+      SESSION_SECRET: ci-dummy-secret
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -56,15 +59,9 @@ jobs:
           cache-dependency-path: backend/pyproject.toml
       - run: pip install -e ".[dev]"
         working-directory: backend
-      - run: |
-          if [ -f alembic.ini ]; then
-            python -m alembic upgrade head
-          fi
+      - run: python -m alembic upgrade head
         working-directory: backend
-      - run: |
-          export DATABASE_URL="postgresql+psycopg://postgres:postgres@localhost:5432/reconcile_test"
-          export SESSION_SECRET="ci-dummy-secret"
-          pytest
+      - run: pytest
         working-directory: backend
 
   audit:

@@ -14,7 +14,7 @@ from app.auth.cookies import (
 from app.auth.csrf import require_csrf
 from app.auth.dependencies import get_current_user
 from app.auth.passwords import hash_password, verify_password
-from app.auth.rate_limit import login_limiter
+from app.auth.rate_limit import client_ip, login_limiter, rate_limit
 from app.auth.sessions import create_session, delete_session
 from app.db import get_db
 from app.models import User
@@ -23,7 +23,12 @@ from app.schemas.auth import LoginRequest, RegisterRequest, UserOut
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
-@router.post("/register", status_code=201, response_model=UserOut)
+@router.post(
+    "/register",
+    status_code=201,
+    response_model=UserOut,
+    dependencies=[Depends(rate_limit("register", 10, 60 * 60, key="ip"))],
+)
 def register(
     body: RegisterRequest,
     response: Response,
@@ -48,8 +53,7 @@ def login(
     response: Response,
     db: Annotated[Session, Depends(get_db)],
 ):
-    client_ip = request.client.host if request.client else "unknown"
-    key = (client_ip, body.email.lower())
+    key = (client_ip(request), body.email.lower())
     if login_limiter.is_blocked(key):
         raise HTTPException(
             status_code=429, detail="Too many failed sign-in attempts, try again later"

@@ -1,6 +1,7 @@
 import contextvars
 import json
 import logging
+import re
 import time
 import uuid
 from datetime import UTC, datetime
@@ -15,6 +16,18 @@ request_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 logger = logging.getLogger(__name__)
 
 STANDARD_RECORD_FIELDS = set(logging.makeLogRecord({}).__dict__) | {"message", "asctime"}
+SENSITIVE_KEY = re.compile(
+    r"password|passwd|secret|token|authorization|cookie|csrf|session|api_key", re.IGNORECASE
+)
+
+
+def redact(value):
+    if isinstance(value, dict):
+        return {
+            key: "[redacted]" if SENSITIVE_KEY.search(str(key)) else redact(item)
+            for key, item in value.items()
+        }
+    return value
 
 
 class JsonFormatter(logging.Formatter):
@@ -28,7 +41,7 @@ class JsonFormatter(logging.Formatter):
         }
         for key, value in record.__dict__.items():
             if key not in STANDARD_RECORD_FIELDS and key not in payload:
-                payload[key] = value
+                payload[key] = "[redacted]" if SENSITIVE_KEY.search(key) else redact(value)
         if record.exc_info:
             payload["exc_info"] = self.formatException(record.exc_info)
         return json.dumps(payload, default=str)
@@ -40,6 +53,8 @@ def configure_logging() -> None:
     root = logging.getLogger()
     root.handlers = [handler]
     root.setLevel(logging.INFO)
+    # uvicorn's access line prints the query string, which holds the Google callback code and state
+    logging.getLogger("uvicorn.access").disabled = True
 
 
 def add_request_logging(app: FastAPI) -> None:

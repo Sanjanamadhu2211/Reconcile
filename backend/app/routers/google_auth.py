@@ -26,6 +26,7 @@ from app.auth.google import (
     validate_claims,
 )
 from app.auth.linking import resolve_user
+from app.auth.rate_limit import rate_limit
 from app.auth.sessions import create_session
 from app.config import get_settings
 from app.db import get_db
@@ -46,7 +47,10 @@ def providers(provider: Annotated[GoogleProvider, Depends(get_google_provider)])
     return {"google": provider.enabled}
 
 
-@router.get("/google/login")
+@router.get(
+    "/google/login",
+    dependencies=[Depends(rate_limit("google-login", 30, 60, key="ip"))],
+)
 def google_login(provider: Annotated[GoogleProvider, Depends(enabled_google_provider)]):
     transaction = LoginTransaction(
         state=secrets.token_urlsafe(32),

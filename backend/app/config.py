@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     session_secret: str = DEFAULT_SESSION_SECRET
     env: str = "development"
     web_origin: str = "http://localhost:3000"
+    trusted_proxy_count: int = 0
     max_upload_mb: int = 10
     max_import_rows: int = 50000
     google_client_id: str | None = None

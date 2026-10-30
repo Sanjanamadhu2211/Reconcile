@@ -15,11 +15,13 @@ from app.routers import (
     summary,
     workspaces,
 )
+from app.security import add_security_headers
 
 
 def create_app() -> FastAPI:
     configure_logging()
     app = FastAPI(title="Reconcile")
+    add_security_headers(app)
     add_request_logging(app)
     app.include_router(health.router)
     app.include_router(auth.router)

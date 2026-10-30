@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session, aliased
 
 from app.auth.dependencies import get_current_user
 from app.auth.permissions import load_member_workspace
+from app.auth.rate_limit import rate_limit
 from app.db import get_db, get_session_factory
 from app.models import Exception as ExceptionModel
 from app.models import (
@@ -29,7 +30,7 @@ from app.models import (
 router = APIRouter(
     prefix="/api/v1",
     tags=["exports"],
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(get_current_user), Depends(rate_limit("export", 30, 60))],
 )
 
 BATCH_SIZE = 1000

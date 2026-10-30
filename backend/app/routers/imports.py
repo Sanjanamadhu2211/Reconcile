@@ -10,6 +10,7 @@ from starlette.datastructures import UploadFile
 from app.auth.csrf import require_csrf
 from app.auth.dependencies import get_current_user
 from app.auth.permissions import load_member_workspace
+from app.auth.rate_limit import rate_limit
 from app.config import get_settings
 from app.db import get_db, get_session_factory
 from app.imports import (
@@ -200,7 +201,11 @@ def _preview(
     "/workspaces/{workspace_id}/imports",
     status_code=201,
     response_model=ImportBatchOut,
-    dependencies=[Depends(require_csrf), Depends(reject_oversized_upload)],
+    dependencies=[
+        Depends(require_csrf),
+        Depends(reject_oversized_upload),
+        Depends(rate_limit("import", 20, 60)),
+    ],
     openapi_extra=UPLOAD_BODY,
 )
 async def upload_import(
@@ -222,7 +227,11 @@ async def upload_import(
 @router.post(
     "/workspaces/{workspace_id}/imports/preview",
     response_model=ImportPreviewOut,
-    dependencies=[Depends(require_csrf), Depends(reject_oversized_upload)],
+    dependencies=[
+        Depends(require_csrf),
+        Depends(reject_oversized_upload),
+        Depends(rate_limit("import", 20, 60)),
+    ],
     openapi_extra=UPLOAD_BODY,
 )
 async def preview_import(

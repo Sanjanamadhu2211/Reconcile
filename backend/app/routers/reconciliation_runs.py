@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.auth.csrf import require_csrf
 from app.auth.dependencies import get_current_user
 from app.auth.permissions import Role, load_member_workspace, require_role
+from app.auth.rate_limit import rate_limit
 from app.db import get_db, get_session_factory
 from app.models import OrganizationMembership, ReconciliationRun, User
 from app.reconciliation.runner import RunInProgress, run_reconciliation
@@ -24,7 +25,7 @@ router = APIRouter(
     "/workspaces/{workspace_id}/reconciliation-runs",
     status_code=201,
     response_model=ReconciliationRunOut,
-    dependencies=[Depends(require_csrf)],
+    dependencies=[Depends(require_csrf), Depends(rate_limit("reconciliation-run", 10, 60))],
 )
 def create_reconciliation_run(
     workspace_id: uuid.UUID,

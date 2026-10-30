@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
+from app.models import Exception as ExceptionModel
 from app.models import OrganizationMembership, User, Workspace
 
 
@@ -45,6 +46,26 @@ def load_member_workspace(
     ).first()
     if row is None:
         raise HTTPException(status_code=404, detail="Workspace not found")
+    return tuple(row)
+
+
+def load_member_exception(
+    db: Session, user: User, exception_id: uuid.UUID
+) -> tuple[ExceptionModel, OrganizationMembership]:
+    # Exceptions outside the caller's organizations match nothing, like missing ones
+    row = db.execute(
+        select(ExceptionModel, OrganizationMembership)
+        .join(
+            OrganizationMembership,
+            and_(
+                OrganizationMembership.organization_id == ExceptionModel.organization_id,
+                OrganizationMembership.user_id == user.id,
+            ),
+        )
+        .where(ExceptionModel.id == exception_id)
+    ).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Exception not found")
     return tuple(row)
 
 

@@ -38,6 +38,7 @@ PUBLIC_ROUTES = {
 }
 
 # Bodies that the cross-tenant call sends; they must be valid so the 404 is what decides.
+EXCEPTION_NOTE = {"version": 1, "note": "Checked"}
 TENANT_BODIES = {
     ("POST", "/api/v1/organizations/{organization_id}/members"): lambda t: {
         "email": t.analyst_email,
@@ -48,6 +49,10 @@ TENANT_BODIES = {
     },
     ("POST", WORKSPACES): lambda t: {"organization_id": t.org_id, "name": "Stolen"},
     ("PATCH", "/api/v1/workspaces/{workspace_id}"): lambda t: {"name": "Renamed"},
+    ("POST", "/api/v1/exceptions/{exception_id}/propose"): lambda t: EXCEPTION_NOTE,
+    ("POST", "/api/v1/exceptions/{exception_id}/approve"): lambda t: EXCEPTION_NOTE,
+    ("POST", "/api/v1/exceptions/{exception_id}/reject"): lambda t: EXCEPTION_NOTE,
+    ("POST", "/api/v1/exceptions/{exception_id}/reopen"): lambda t: EXCEPTION_NOTE,
 }
 
 
@@ -77,6 +82,8 @@ PROTECTED_ROUTES = sorted(_all_routes() - PUBLIC_ROUTES)
 STATE_CHANGING_ROUTES = [route for route in PROTECTED_ROUTES if route[0] != "GET"]
 TENANT_ROUTES = [route for route in PROTECTED_ROUTES if "{" in route[1] or route in TENANT_BODIES]
 LIST_ROUTES = [path for method, path in PROTECTED_ROUTES if method == "GET" and "{" not in path]
+# Organization-scoped lists answer outsiders with 404 instead of an empty page
+ORGANIZATION_SCOPED_LISTS = {"/api/v1/audit-events"}
 
 
 def _path(template: str, ids: dict | None = None) -> str:
@@ -150,6 +157,14 @@ def victim():
         f"{WORKSPACES}/{run_workspace['id']}/reconciliation-runs", headers=_csrf(owner)
     )
     assert reconciled.status_code == 201
+    # Orders without payments leave an unmatched exception for the exception routes
+    orders_run = owner.post(
+        f"{WORKSPACES}/{workspace['id']}/reconciliation-runs", headers=_csrf(owner)
+    )
+    assert orders_run.status_code == 201
+    exception = owner.get(
+        f"/api/v1/reconciliation-runs/{orders_run.json()['id']}/exceptions"
+    ).json()[0]
     # Empty workspace for reviewer-only delete test
     empty_workspace = _workspace(owner, org["id"])
     analyst, analyst_user = _signed_in()
@@ -167,6 +182,7 @@ def victim():
         empty_workspace_id=empty_workspace["id"],
         import_id=imported.json()["id"],
         run_id=reconciled.json()["id"],
+        exception_id=exception["id"],
         owner_id=owner_user["id"],
         analyst_id=analyst_user["id"],
         analyst_email=analyst_user["email"],
@@ -242,6 +258,7 @@ def test_another_organization_gets_404_and_its_data_is_unchanged(method, path, v
         "user_id": victim.analyst_id,
         "import_id": victim.import_id,
         "run_id": victim.run_id,
+        "exception_id": victim.exception_id,
     }
     body = TENANT_BODIES[(method, path)](victim) if (method, path) in TENANT_BODIES else None
 
@@ -255,7 +272,8 @@ def test_another_organization_gets_404_and_its_data_is_unchanged(method, path, v
 def test_lists_never_show_another_organizations_ids(path, victim, attacker):
     response = attacker.get(path, params={"organization_id": victim.org_id})
 
-    assert response.status_code == 200
+    expected = 404 if path in ORGANIZATION_SCOPED_LISTS else 200
+    assert response.status_code == expected
     for identifier in victim.identifiers:
         assert str(identifier) not in response.text
 

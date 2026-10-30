@@ -81,6 +81,39 @@ def _format_amount(amount: Decimal) -> str:
     return f"{amount:.4f}"
 
 
+def exception_item(exc: ExceptionModel) -> ExceptionItem:
+    txn = exc.transaction
+    imp_row = exc.import_row
+
+    if txn is not None:
+        transaction_summary = ExceptionTransactionSummary(
+            source_name=txn.source_name,
+            external_id=txn.external_id,
+            amount=_format_amount(txn.amount),
+            currency=txn.currency,
+            occurred_at=txn.occurred_at,
+        )
+        import_row_summary = None
+    else:
+        transaction_summary = None
+        import_row_summary = ExceptionImportRowSummary(
+            row_number=imp_row.row_number,
+            batch_id=imp_row.import_batch_id,
+        )
+
+    return ExceptionItem(
+        id=exc.id,
+        category=exc.category,
+        status=exc.status,
+        version=exc.version,
+        assigned_reviewer_id=exc.assigned_reviewer_id,
+        details=exc.details,
+        transaction=transaction_summary,
+        import_row=import_row_summary,
+        reconciliation_run_id=exc.reconciliation_run_id,
+    )
+
+
 @router.get(
     "/workspaces/{workspace_id}/reconciliation-runs",
     response_model=list[ReconciliationRunSummary],
@@ -234,41 +267,7 @@ def list_exceptions(
         .offset(offset)
     ).all()
 
-    result = []
-    for exc in exceptions:
-        txn = exc.transaction
-        imp_row = exc.import_row
-
-        if txn is not None:
-            transaction_summary = ExceptionTransactionSummary(
-                source_name=txn.source_name,
-                external_id=txn.external_id,
-                amount=_format_amount(txn.amount),
-                currency=txn.currency,
-                occurred_at=txn.occurred_at,
-            )
-            import_row_summary = None
-        else:
-            transaction_summary = None
-            import_row_summary = ExceptionImportRowSummary(
-                row_number=imp_row.row_number,
-                batch_id=imp_row.import_batch_id,
-            )
-
-        result.append(
-            ExceptionItem(
-                id=exc.id,
-                category=exc.category,
-                status=exc.status,
-                version=exc.version,
-                assigned_reviewer_id=exc.assigned_reviewer_id,
-                details=exc.details,
-                transaction=transaction_summary,
-                import_row=import_row_summary,
-                reconciliation_run_id=exc.reconciliation_run_id,
-            )
-        )
-    return result
+    return [exception_item(exc) for exc in exceptions]
 
 
 @router.get(
@@ -311,33 +310,4 @@ def get_exception(
     if exc is None:
         raise HTTPException(status_code=404, detail="Exception not found")
 
-    txn = exc.transaction
-    imp_row = exc.import_row
-
-    if txn is not None:
-        transaction_summary = ExceptionTransactionSummary(
-            source_name=txn.source_name,
-            external_id=txn.external_id,
-            amount=_format_amount(txn.amount),
-            currency=txn.currency,
-            occurred_at=txn.occurred_at,
-        )
-        import_row_summary = None
-    else:
-        transaction_summary = None
-        import_row_summary = ExceptionImportRowSummary(
-            row_number=imp_row.row_number,
-            batch_id=imp_row.import_batch_id,
-        )
-
-    return ExceptionItem(
-        id=exc.id,
-        category=exc.category,
-        status=exc.status,
-        version=exc.version,
-        assigned_reviewer_id=exc.assigned_reviewer_id,
-        details=exc.details,
-        transaction=transaction_summary,
-        import_row=import_row_summary,
-        reconciliation_run_id=exc.reconciliation_run_id,
-    )
+    return exception_item(exc)

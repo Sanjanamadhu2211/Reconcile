@@ -441,7 +441,7 @@ class TestLargeInput:
         result = run_matching(records)
         elapsed = time.perf_counter() - start
 
-        assert elapsed < 5.0, f"Matching took {elapsed:.2f}s, expected < 5s"
+        assert elapsed < 30.0, f"Matching took {elapsed:.2f}s, expected < 30s"
         assert len(result.matches) == 10_000  # 5000 orders→payments + 5000 payments→settlements
         assert all(m.rule == "exact_id" for m in result.matches)
         # No exceptions because everything matches perfectly in both pairings

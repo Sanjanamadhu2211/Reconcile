@@ -12,6 +12,7 @@ from app.routers import (
     organizations,
     reconciliation_results,
     reconciliation_runs,
+    summary,
     workspaces,
 )
 
@@ -25,6 +26,7 @@ def create_app() -> FastAPI:
     app.include_router(google_auth.router)
     app.include_router(organizations.router)
     app.include_router(workspaces.router)
+    app.include_router(summary.router)
     app.include_router(imports.router)
     app.include_router(reconciliation_results.router)
     app.include_router(reconciliation_runs.router)

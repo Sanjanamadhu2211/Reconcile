@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import ExceptionActions from "@/components/exceptions/ExceptionActions";
+import ResolutionHistory from "@/components/exceptions/ResolutionHistory";
 import styles from "@/components/exceptions/exceptions.module.css";
 import { api } from "@/lib/api/client";
 import { apiErrorMessage } from "@/lib/auth";
@@ -32,6 +33,7 @@ export default function ExceptionDetailPage() {
 function ExceptionDetail() {
   const { exceptionId } = useParams<{ exceptionId: string }>();
   const [load, setLoad] = useState<Load>({ state: "loading" });
+  const [reloads, setReloads] = useState(0);
 
   useEffect(() => {
     let ignore = false;
@@ -53,7 +55,7 @@ function ExceptionDetail() {
     return () => {
       ignore = true;
     };
-  }, [exceptionId]);
+  }, [exceptionId, reloads]);
 
   if (load.state === "loading") {
     return (
@@ -142,7 +144,12 @@ function ExceptionDetail() {
         <p className={styles.muted}>{exception.reconciliation_run_id}</p>
       </section>
 
-      <ExceptionActions />
+      <ExceptionActions
+        exception={exception}
+        onUpdated={(updated) => setLoad({ state: "ready", exception: updated })}
+        onReload={() => setReloads((count) => count + 1)}
+      />
+      <ResolutionHistory exceptionId={exception.id} version={exception.version} />
     </div>
   );
 }

@@ -89,7 +89,8 @@
 }
 
 .field input,
-.field select {
+.field select,
+.field textarea {
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -197,6 +198,31 @@
 }
 
 .details dd {
+  overflow-wrap: anywhere;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding-left: 0;
+  list-style: none;
+}
+
+.timeline li {
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--border);
+}
+
+.timelineHeader {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.note {
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 

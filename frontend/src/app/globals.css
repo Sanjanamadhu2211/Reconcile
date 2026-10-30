@@ -1,12 +1,24 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --muted: #5f6368;
+  --border: #c6c9cd;
+  --surface: #f4f5f7;
+  --accent: #1f2937;
+  --accent-foreground: #ffffff;
+  --error: #b3261e;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --muted: #a7adb4;
+    --border: #4b5056;
+    --surface: #171a1d;
+    --accent: #e8e8e8;
+    --accent-foreground: #111111;
+    --error: #f2b8b5;
   }
 }
 
@@ -46,4 +58,106 @@ a {
   html {
     color-scheme: dark;
   }
+}
+
+.auth-page,
+.home-page {
+  width: 100%;
+  max-width: 26rem;
+  margin: 0 auto;
+  padding: 4rem 1.25rem;
+}
+
+.auth-page h1,
+.home-page h1 {
+  font-size: 1.75rem;
+  margin-bottom: 1rem;
+}
+
+.form-error {
+  color: var(--error);
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-form label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-top: 1rem;
+}
+
+.auth-form input {
+  margin-top: 0.35rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  color: var(--foreground);
+  background: var(--background);
+}
+
+.auth-form input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.auth-form button {
+  margin-top: 1.5rem;
+}
+
+.auth-form button,
+.home-page button,
+.button-link {
+  padding: 0.65rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--accent-foreground);
+  background: var(--accent);
+}
+
+.auth-form button:disabled,
+.home-page button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.button-link {
+  display: block;
+  margin-top: 0.75rem;
+  text-align: center;
+}
+
+.button-link:hover,
+.auth-form button:not(:disabled):hover,
+.home-page button:not(:disabled):hover {
+  opacity: 0.85;
+}
+
+.field-hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-top: 0.4rem;
+}
+
+.auth-switch {
+  margin-top: 1.5rem;
+  color: var(--muted);
+}
+
+.auth-switch a {
+  color: var(--foreground);
+  text-decoration: underline;
+}
+
+.signed-in-as {
+  color: var(--muted);
+  margin-bottom: 1.25rem;
 }

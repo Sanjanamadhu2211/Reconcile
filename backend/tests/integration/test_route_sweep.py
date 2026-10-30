@@ -122,6 +122,13 @@ def victim():
     owner, owner_user = _signed_in()
     org = _organization(owner)
     workspace = _workspace(owner, org["id"])
+    # The run lives in a second workspace: a workspace with runs cannot be deleted yet,
+    # and the reviewer-only test deletes the victim workspace.
+    run_workspace = _workspace(owner, org["id"])
+    reconciled = owner.post(
+        f"{WORKSPACES}/{run_workspace['id']}/reconciliation-runs", headers=_csrf(owner)
+    )
+    assert reconciled.status_code == 201
     analyst, analyst_user = _signed_in()
     added = owner.post(
         f"{ORGANIZATIONS}/{org['id']}/members",
@@ -134,6 +141,7 @@ def victim():
         analyst=analyst,
         org_id=org["id"],
         workspace_id=workspace["id"],
+        run_id=reconciled.json()["id"],
         owner_id=owner_user["id"],
         analyst_id=analyst_user["id"],
         analyst_email=analyst_user["email"],
@@ -201,6 +209,7 @@ def test_another_organization_gets_404_and_its_data_is_unchanged(method, path, v
         "organization_id": victim.org_id,
         "workspace_id": victim.workspace_id,
         "user_id": victim.analyst_id,
+        "run_id": victim.run_id,
     }
     body = TENANT_BODIES[(method, path)](victim) if (method, path) in TENANT_BODIES else None
 

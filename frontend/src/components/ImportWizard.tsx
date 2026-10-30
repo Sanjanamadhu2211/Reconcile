@@ -181,8 +181,16 @@ export default function ImportWizard({ workspaceId, onUploaded }: ImportWizardPr
             disabled={pending !== null}
           />
           <div aria-live="polite">
-            {fileError && <p className="form-error">{fileError}</p>}
-            {error && <p className="form-error">{error.message}</p>}
+            {fileError && (
+              <p role="alert" className="form-error">
+                {fileError}
+              </p>
+            )}
+            {error && (
+              <p role="alert" className="form-error">
+                {error.message}
+              </p>
+            )}
           </div>
           <button type="submit" className="btn" disabled={pending !== null}>
             {pending === "preview" ? "Checking file…" : "Preview"}
@@ -265,7 +273,11 @@ export default function ImportWizard({ workspaceId, onUploaded }: ImportWizardPr
                 Import {result.status}: {result.rows_processed} of {result.rows_total} rows
                 processed, {result.rows_failed} failed.
               </p>
-              {result.error_summary && <p className="form-error">{result.error_summary}</p>}
+              {result.error_summary && (
+                <p role="alert" className="form-error">
+                  {result.error_summary}
+                </p>
+              )}
               <a href="#import-errors" className="action-link">
                 View row errors
               </a>
@@ -273,7 +285,9 @@ export default function ImportWizard({ workspaceId, onUploaded }: ImportWizardPr
           )}
           {error && (
             <div aria-live="polite">
-              <p className="form-error">{error.message}</p>
+              <p role="alert" className="form-error">
+                {error.message}
+              </p>
               {error.retryable ? (
                 <button type="button" className="retry-button" onClick={startUpload}>
                   Try again

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import AppShell from "@/components/AppShell";
 import { errorText } from "@/lib/errors";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 import {
   DEFAULT_TOLERANCE_HOURS,
   createOrganization,
@@ -16,6 +17,7 @@ import {
 } from "@/lib/workspaces";
 
 export default function WorkspacesPage() {
+  useDocumentTitle("Workspaces");
   const [workspaces, setWorkspaces] = useState<WorkspaceOut[]>([]);
   const [organizations, setOrganizations] = useState<OrganizationOut[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -45,17 +47,23 @@ export default function WorkspacesPage() {
         <h1>Workspaces</h1>
       </div>
 
-      {error && (
-        <div aria-live="polite">
-          <p className="form-error">{error}</p>
-          {!loaded && (
+      <div aria-live="polite">
+        {error && (
+          <>
+            <p role="alert" className="form-error">
+              {error}
+            </p>
             <button type="button" className="retry-button" onClick={load}>
-              Try again
+              Retry
             </button>
-          )}
-        </div>
+          </>
+        )}
+      </div>
+      {!loaded && !error && (
+        <p className="loading" aria-busy="true">
+          Loading…
+        </p>
       )}
-      {!loaded && !error && <p className="loading">Loading…</p>}
 
       {loaded && organizations.length === 0 && (
         <section className="empty-state">
@@ -77,31 +85,33 @@ export default function WorkspacesPage() {
           {workspaces.length === 0 ? (
             <p className="empty-state">No workspaces yet.</p>
           ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">Name</th>
-                  <th scope="col">Organization</th>
-                  <th scope="col">Tolerance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {workspaces.map((workspace) => (
-                  <tr key={workspace.id}>
-                    <td>
-                      <Link href={`/workspaces/${workspace.id}`} className="link">
-                        {workspace.name}
-                      </Link>
-                    </td>
-                    <td>
-                      {organizations.find((org) => org.id === workspace.organization_id)?.name ??
-                        "—"}
-                    </td>
-                    <td>{workspace.timestamp_tolerance_hours} hours</td>
+            <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Organization</th>
+                    <th scope="col">Tolerance</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {workspaces.map((workspace) => (
+                    <tr key={workspace.id}>
+                      <td>
+                        <Link href={`/workspaces/${workspace.id}`} className="link">
+                          {workspace.name}
+                        </Link>
+                      </td>
+                      <td>
+                        {organizations.find((org) => org.id === workspace.organization_id)?.name ??
+                          "—"}
+                      </td>
+                      <td>{workspace.timestamp_tolerance_hours} hours</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
       )}
@@ -137,7 +147,13 @@ function OrganizationForm({ onCreated }: { onCreated: () => void }) {
         value={name}
         onChange={(event) => setName(event.target.value)}
       />
-      <div aria-live="polite">{error && <p className="form-error">{error}</p>}</div>
+      <div aria-live="polite">
+        {error && (
+          <p role="alert" className="form-error">
+            {error}
+          </p>
+        )}
+      </div>
       <button type="submit" className="btn" disabled={submitting}>
         {submitting ? "Creating…" : "Create organization"}
       </button>
@@ -215,7 +231,13 @@ function WorkspaceForm({
         value={tolerance}
         onChange={(event) => setTolerance(event.target.value)}
       />
-      <div aria-live="polite">{error && <p className="form-error">{error}</p>}</div>
+      <div aria-live="polite">
+        {error && (
+          <p role="alert" className="form-error">
+            {error}
+          </p>
+        )}
+      </div>
       <button type="submit" className="btn" disabled={submitting}>
         {submitting ? "Creating…" : "Create workspace"}
       </button>

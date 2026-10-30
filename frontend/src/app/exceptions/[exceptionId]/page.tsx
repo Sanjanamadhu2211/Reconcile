@@ -15,6 +15,7 @@ import {
   getStatusLabel,
   type ExceptionItem,
 } from "@/lib/exceptions";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 
 type Load =
   | { state: "loading" }
@@ -23,6 +24,7 @@ type Load =
   | { state: "error"; message: string };
 
 export default function ExceptionDetailPage() {
+  useDocumentTitle("Exception");
   return (
     <AppShell>
       <ExceptionDetail />
@@ -87,6 +89,15 @@ function ExceptionDetail() {
         <h1>Exception</h1>
         <p className={styles.error} role="alert">
           {load.message}
+        </p>
+        <p>
+          <button
+            type="button"
+            className={styles.button}
+            onClick={() => setReloads((count) => count + 1)}
+          >
+            Retry
+          </button>
         </p>
       </div>
     );

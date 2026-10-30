@@ -6,6 +6,7 @@ import BatchHistory from "@/components/BatchHistory";
 import ImportWizard from "@/components/ImportWizard";
 import { errorText } from "@/lib/errors";
 import { listImports, type ImportBatchOut } from "@/lib/imports";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 
 interface ImportsPageProps {
   params: Promise<{ workspaceId: string }>;
@@ -13,6 +14,7 @@ interface ImportsPageProps {
 
 export default function ImportsPage({ params }: ImportsPageProps) {
   const { workspaceId } = use(params);
+  useDocumentTitle("Imports");
   const [batches, setBatches] = useState<ImportBatchOut[] | null>(null);
   const [historyError, setHistoryError] = useState<string | null>(null);
 
@@ -35,7 +37,7 @@ export default function ImportsPage({ params }: ImportsPageProps) {
         <h1>Imports</h1>
       </div>
       <ImportWizard workspaceId={workspaceId} onUploaded={loadHistory} />
-      <BatchHistory batches={batches} error={historyError} />
+      <BatchHistory batches={batches} error={historyError} onRetry={loadHistory} />
     </AppShell>
   );
 }

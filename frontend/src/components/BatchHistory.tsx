@@ -12,58 +12,74 @@ import { errorText } from "@/lib/errors";
 interface BatchHistoryProps {
   batches: ImportBatchOut[] | null;
   error: string | null;
+  onRetry: () => void;
 }
 
-export default function BatchHistory({ batches, error }: BatchHistoryProps) {
+export default function BatchHistory({ batches, error, onRetry }: BatchHistoryProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = batches?.find((batch) => batch.id === selectedId) ?? batches?.[0] ?? null;
 
   return (
     <section className="table-section" aria-labelledby="batch-history-title">
       <h2 id="batch-history-title">Import history</h2>
-      {error && <p className="form-error">{error}</p>}
-      {batches === null && !error && <p className="loading">Loading…</p>}
+      {error && (
+        <div aria-live="polite">
+          <p role="alert" className="form-error">
+            {error}
+          </p>
+          <button type="button" className="retry-button" onClick={onRetry}>
+            Retry
+          </button>
+        </div>
+      )}
+      {batches === null && !error && (
+        <p className="loading" aria-busy="true">
+          Loading…
+        </p>
+      )}
       {batches?.length === 0 && <p className="empty-state">No imports yet.</p>}
       {batches && batches.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">File</th>
-              <th scope="col">Source</th>
-              <th scope="col">Status</th>
-              <th scope="col">Rows</th>
-              <th scope="col">Failed</th>
-              <th scope="col">Started</th>
-              <th scope="col">
-                <span className="visually-hidden">Actions</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {batches.map((batch) => (
-              <tr key={batch.id}>
-                <td>{batch.filename ?? "—"}</td>
-                <td>{batch.source_name}</td>
-                <td>{batch.status}</td>
-                <td>
-                  {batch.rows_processed} of {batch.rows_total}
-                </td>
-                <td>{batch.rows_failed}</td>
-                <td>{new Date(batch.created_at).toLocaleString()}</td>
-                <td>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    aria-pressed={selected?.id === batch.id}
-                    onClick={() => setSelectedId(batch.id)}
-                  >
-                    Errors
-                  </button>
-                </td>
+        <div className="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">File</th>
+                <th scope="col">Source</th>
+                <th scope="col">Status</th>
+                <th scope="col">Rows</th>
+                <th scope="col">Failed</th>
+                <th scope="col">Started</th>
+                <th scope="col">
+                  <span className="visually-hidden">Actions</span>
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {batches.map((batch) => (
+                <tr key={batch.id}>
+                  <td>{batch.filename ?? "—"}</td>
+                  <td>{batch.source_name}</td>
+                  <td>{batch.status}</td>
+                  <td>
+                    {batch.rows_processed} of {batch.rows_total}
+                  </td>
+                  <td>{batch.rows_failed}</td>
+                  <td>{new Date(batch.created_at).toLocaleString()}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      aria-pressed={selected?.id === batch.id}
+                      onClick={() => setSelectedId(batch.id)}
+                    >
+                      Errors
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
       {selected && <BatchErrors key={selected.id} batch={selected} />}
     </section>
@@ -74,6 +90,7 @@ function BatchErrors({ batch }: { batch: ImportBatchOut }) {
   const [offset, setOffset] = useState(0);
   const [rows, setRows] = useState<ImportErrorOut[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -89,34 +106,50 @@ function BatchErrors({ batch }: { batch: ImportBatchOut }) {
     return () => {
       active = false;
     };
-  }, [batch.id, offset]);
+  }, [batch.id, offset, attempt]);
 
   return (
     <section id="import-errors" className="table-section" aria-labelledby="import-errors-title">
       <h3 id="import-errors-title">Row errors for {batch.filename ?? "this import"}</h3>
-      {error && <p className="form-error">{error}</p>}
+      {error && (
+        <div aria-live="polite">
+          <p role="alert" className="form-error">
+            {error}
+          </p>
+          <button type="button" className="retry-button" onClick={() => setAttempt((n) => n + 1)}>
+            Retry
+          </button>
+        </div>
+      )}
+      {rows === null && !error && (
+        <p className="loading" aria-busy="true">
+          Loading row errors…
+        </p>
+      )}
       {rows?.length === 0 && offset === 0 && <p className="empty-state">No row errors.</p>}
       {rows && rows.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Row</th>
-              <th scope="col">Status</th>
-              <th scope="col">Error code</th>
-              <th scope="col">Detail</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.row_number}>
-                <td>{row.row_number}</td>
-                <td>{row.validation_status}</td>
-                <td>{row.error_code ?? "—"}</td>
-                <td>{row.error_detail ?? "—"}</td>
+        <div className="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Row</th>
+                <th scope="col">Status</th>
+                <th scope="col">Error code</th>
+                <th scope="col">Detail</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.row_number}>
+                  <td>{row.row_number}</td>
+                  <td>{row.validation_status}</td>
+                  <td>{row.error_code ?? "—"}</td>
+                  <td>{row.error_detail ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
       <div className="pagination-controls">
         <button

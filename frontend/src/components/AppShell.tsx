@@ -79,7 +79,11 @@ export default function AppShell({ children }: AppShellProps) {
       </header>
       <main className="app-main">
         <div aria-live="polite" className="error-region">
-          {error && <p className="form-error">{error}</p>}
+          {error && (
+            <p role="alert" className="form-error">
+              {error}
+            </p>
+          )}
         </div>
         {error && !loaded && (
           <button type="button" className="retry-button" onClick={loadUser}>

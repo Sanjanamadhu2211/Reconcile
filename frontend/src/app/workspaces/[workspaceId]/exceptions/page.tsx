@@ -21,8 +21,10 @@ import {
   type ExceptionFilters,
   type ExceptionItem,
 } from "@/lib/exceptions";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 
 export default function ExceptionQueuePage() {
+  useDocumentTitle("Exceptions");
   return (
     <AppShell>
       <Suspense fallback={<p>Loading…</p>}>
@@ -139,7 +141,7 @@ function ExceptionQueue() {
       />
       <div aria-live="polite">
         {exceptionsError && (
-          <p className={styles.error}>
+          <p role="alert" className={styles.error}>
             {exceptionsError}{" "}
             <button
               type="button"
@@ -150,7 +152,9 @@ function ExceptionQueue() {
             </button>
           </p>
         )}
-        {!exceptionsError && exceptions === undefined && <p>Loading exceptions…</p>}
+        {!exceptionsError && exceptions === undefined && (
+          <p aria-busy="true">Loading exceptions…</p>
+        )}
       </div>
       {!exceptionsError && exceptions !== undefined && (
         <>

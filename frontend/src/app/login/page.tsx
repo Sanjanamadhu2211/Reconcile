@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
+import styles from "@/components/auth/auth.module.css";
 import { authErrorMessage, googleSignInEnabled, login } from "@/lib/auth";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 
 export default function LoginPage() {
+  useDocumentTitle("Sign in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -30,12 +33,16 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="auth-page">
+    <main className={styles.page}>
       <h1>Sign in</h1>
       <div aria-live="polite" className="error-region">
-        {error && <p className="form-error">{error}</p>}
+        {error && (
+          <p role="alert" className="form-error">
+            {error}
+          </p>
+        )}
       </div>
-      <form className="auth-form" onSubmit={handleSubmit}>
+      <form className={styles.form} onSubmit={handleSubmit}>
         <label htmlFor="email">Email</label>
         <input
           id="email"
@@ -61,11 +68,11 @@ export default function LoginPage() {
         </button>
       </form>
       {googleEnabled && (
-        <a className="button-link" href="/api/v1/auth/google/login">
+        <a className={styles.buttonLink} href="/api/v1/auth/google/login">
           Continue with Google
         </a>
       )}
-      <p className="auth-switch">
+      <p className={styles.switch}>
         No account yet? <Link href="/register">Create one</Link>
       </p>
     </main>

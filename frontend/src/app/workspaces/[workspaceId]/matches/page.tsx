@@ -21,11 +21,13 @@ import {
   parseMatchFilters,
   type MatchFilters,
 } from "@/lib/exceptions";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 
 type MatchItem = components["schemas"]["MatchItem"];
 type TransactionSummary = components["schemas"]["TransactionSummary"];
 
 export default function MatchesPage() {
+  useDocumentTitle("Matches");
   return (
     <AppShell>
       <Suspense fallback={<p>Loading…</p>}>
@@ -149,7 +151,7 @@ function Matches() {
       </div>
       <div aria-live="polite">
         {matchesError && (
-          <p className={styles.error}>
+          <p role="alert" className={styles.error}>
             {matchesError}{" "}
             <button
               type="button"
@@ -160,7 +162,7 @@ function Matches() {
             </button>
           </p>
         )}
-        {!matchesError && matches === undefined && <p>Loading matches…</p>}
+        {!matchesError && matches === undefined && <p aria-busy="true">Loading matches…</p>}
       </div>
       {!matchesError && matches !== undefined && (
         <>

@@ -6,6 +6,7 @@ import AppShell from "@/components/AppShell";
 import DashboardSummary from "@/components/dashboard/DashboardSummary";
 import ExportLinks from "@/components/ExportLinks";
 import { errorText } from "@/lib/errors";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 import {
   createReconciliationRun,
   getWorkspace,
@@ -24,6 +25,7 @@ interface WorkspacePageProps {
 export default function WorkspacePage({ params }: WorkspacePageProps) {
   const { workspaceId } = use(params);
   const [workspace, setWorkspace] = useState<WorkspaceOut | null>(null);
+  useDocumentTitle(workspace?.name ?? "Workspace");
   const [runs, setRuns] = useState<ReconciliationRunSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
@@ -77,15 +79,23 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
 
   return (
     <AppShell>
-      {error && (
-        <div aria-live="polite">
-          <p className="form-error">{error}</p>
-          <button type="button" className="retry-button" onClick={load}>
-            Try again
-          </button>
-        </div>
+      <div aria-live="polite">
+        {error && (
+          <>
+            <p role="alert" className="form-error">
+              {error}
+            </p>
+            <button type="button" className="retry-button" onClick={load}>
+              Retry
+            </button>
+          </>
+        )}
+      </div>
+      {!workspace && !error && (
+        <p className="loading" aria-busy="true">
+          Loading…
+        </p>
       )}
-      {!workspace && !error && <p className="loading">Loading…</p>}
       {workspace && (
         <>
           <div className="page-header">
@@ -114,7 +124,11 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
               {running ? "Running…" : "Run reconciliation"}
             </button>
             <div aria-live="polite">
-              {runError && <p className="form-error">{runError}</p>}
+              {runError && (
+                <p role="alert" className="form-error">
+                  {runError}
+                </p>
+              )}
               {runResult && (
                 <p>
                   Run {runResult.status}: {runResult.matches_count} matches,{" "}
@@ -134,26 +148,28 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
             {runs.length === 0 ? (
               <p className="empty-state">No runs yet.</p>
             ) : (
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">Status</th>
-                    <th scope="col">Matches</th>
-                    <th scope="col">Exceptions</th>
-                    <th scope="col">Started</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {runs.map((run) => (
-                    <tr key={run.id}>
-                      <td>{run.status}</td>
-                      <td>{run.matches_count}</td>
-                      <td>{run.exceptions_count}</td>
-                      <td>{run.started_at ? new Date(run.started_at).toLocaleString() : "—"}</td>
+              <div className="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">Status</th>
+                      <th scope="col">Matches</th>
+                      <th scope="col">Exceptions</th>
+                      <th scope="col">Started</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {runs.map((run) => (
+                      <tr key={run.id}>
+                        <td>{run.status}</td>
+                        <td>{run.matches_count}</td>
+                        <td>{run.exceptions_count}</td>
+                        <td>{run.started_at ? new Date(run.started_at).toLocaleString() : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </section>
         </>

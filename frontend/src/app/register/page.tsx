@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import styles from "@/components/auth/auth.module.css";
 import { register } from "@/lib/auth";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 
 export default function RegisterPage() {
+  useDocumentTitle("Create account");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -24,12 +27,16 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="auth-page">
+    <main className={styles.page}>
       <h1>Create an account</h1>
       <div aria-live="polite" className="error-region">
-        {error && <p className="form-error">{error}</p>}
+        {error && (
+          <p role="alert" className="form-error">
+            {error}
+          </p>
+        )}
       </div>
-      <form className="auth-form" onSubmit={handleSubmit}>
+      <form className={styles.form} onSubmit={handleSubmit}>
         <label htmlFor="email">Email</label>
         <input
           id="email"
@@ -48,15 +55,18 @@ export default function RegisterPage() {
           autoComplete="new-password"
           minLength={10}
           required
+          aria-describedby="password-hint"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
         />
-        <p className="field-hint">At least 10 characters.</p>
+        <p id="password-hint" className={styles.hint}>
+          At least 10 characters.
+        </p>
         <button type="submit" disabled={submitting}>
           {submitting ? "Creating account…" : "Create account"}
         </button>
       </form>
-      <p className="auth-switch">
+      <p className={styles.switch}>
         Already have an account? <Link href="/login">Sign in</Link>
       </p>
     </main>

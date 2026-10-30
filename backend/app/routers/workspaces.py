@@ -2,7 +2,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -10,7 +10,14 @@ from app.auth.csrf import require_csrf
 from app.auth.dependencies import get_current_user
 from app.auth.permissions import Role, load_member_workspace, load_membership, require_role
 from app.db import get_db
-from app.models import ImportBatch, OrganizationMembership, User, Workspace
+from app.models import (
+    ImportBatch,
+    OrganizationMembership,
+    ReconciliationRun,
+    Transaction,
+    User,
+    Workspace,
+)
 from app.pagination import Limit, Offset
 from app.schemas.workspaces import WorkspaceCreate, WorkspaceOut, WorkspaceUpdate
 
@@ -118,6 +125,30 @@ def delete_workspace(
 ):
     workspace, membership = load_member_workspace(db, user, workspace_id)
     require_role(membership, Role.reviewer)
-    db.execute(delete(ImportBatch).where(ImportBatch.workspace_id == workspace.id))
+
+    # Check if workspace has any import batches, transactions, or reconciliation runs
+    has_imports = (
+        db.scalar(select(ImportBatch.id).where(ImportBatch.workspace_id == workspace.id).limit(1))
+        is not None
+    )
+    has_transactions = (
+        db.scalar(select(Transaction.id).where(Transaction.workspace_id == workspace.id).limit(1))
+        is not None
+    )
+    has_runs = (
+        db.scalar(
+            select(ReconciliationRun.id)
+            .where(ReconciliationRun.workspace_id == workspace.id)
+            .limit(1)
+        )
+        is not None
+    )
+
+    if has_imports or has_transactions or has_runs:
+        raise HTTPException(
+            status_code=409,
+            detail="Workspace holds imported data and cannot be deleted",
+        )
+
     db.delete(workspace)
     db.commit()

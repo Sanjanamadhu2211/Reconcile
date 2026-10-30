@@ -144,13 +144,14 @@ def victim():
         headers=_csrf(owner),
     )
     assert imported.status_code == 201
-    # The run lives in a second workspace: a workspace with runs cannot be deleted yet,
-    # and the reviewer-only test deletes the victim workspace.
+    # The run lives in a second workspace: a workspace with runs cannot be deleted.
     run_workspace = _workspace(owner, org["id"])
     reconciled = owner.post(
         f"{WORKSPACES}/{run_workspace['id']}/reconciliation-runs", headers=_csrf(owner)
     )
     assert reconciled.status_code == 201
+    # Empty workspace for reviewer-only delete test
+    empty_workspace = _workspace(owner, org["id"])
     analyst, analyst_user = _signed_in()
     added = owner.post(
         f"{ORGANIZATIONS}/{org['id']}/members",
@@ -163,6 +164,7 @@ def victim():
         analyst=analyst,
         org_id=org["id"],
         workspace_id=workspace["id"],
+        empty_workspace_id=empty_workspace["id"],
         import_id=imported.json()["id"],
         run_id=reconciled.json()["id"],
         owner_id=owner_user["id"],
@@ -171,6 +173,7 @@ def victim():
         identifiers=[
             org["id"],
             workspace["id"],
+            empty_workspace["id"],
             owner_user["id"],
             analyst_user["id"],
             owner_user["email"],
@@ -262,6 +265,7 @@ def test_reviewer_only_routes_refuse_analysts_and_admit_reviewers(victim):
     members = f"{ORGANIZATIONS}/{victim.org_id}/members"
     member_url = f"{members}/{victim.analyst_id}"
     workspace_url = f"{WORKSPACES}/{victim.workspace_id}"
+    empty_workspace_url = f"{WORKSPACES}/{victim.empty_workspace_id}"
     _, invitee = _signed_in()
     new_workspace = {"organization_id": victim.org_id, "name": f"Ledger {uuid.uuid4()}"}
     invite = {"email": invitee["email"], "role": "analyst"}
@@ -269,7 +273,7 @@ def test_reviewer_only_routes_refuse_analysts_and_admit_reviewers(victim):
     analyst_attempts = [
         analyst.post(WORKSPACES, json=new_workspace, headers=_csrf(analyst)),
         analyst.patch(workspace_url, json={"name": "Renamed"}, headers=_csrf(analyst)),
-        analyst.delete(workspace_url, headers=_csrf(analyst)),
+        analyst.delete(empty_workspace_url, headers=_csrf(analyst)),
         analyst.post(members, json=invite, headers=_csrf(analyst)),
         analyst.patch(member_url, json={"role": "reviewer"}, headers=_csrf(analyst)),
         analyst.delete(member_url, headers=_csrf(analyst)),
@@ -287,7 +291,7 @@ def test_reviewer_only_routes_refuse_analysts_and_admit_reviewers(victim):
         == 200
     )
     assert reviewer.delete(member_url, headers=_csrf(reviewer)).status_code == 204
-    assert reviewer.delete(workspace_url, headers=_csrf(reviewer)).status_code == 204
+    assert reviewer.delete(empty_workspace_url, headers=_csrf(reviewer)).status_code == 204
 
 
 def test_deleted_session_cookie_is_rejected():

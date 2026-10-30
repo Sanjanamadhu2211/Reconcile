@@ -1,4 +1,5 @@
 import uuid
+from pathlib import Path
 
 import pytest
 from fastapi import HTTPException
@@ -18,6 +19,7 @@ REGISTER = "/api/v1/auth/register"
 ORGANIZATIONS = "/api/v1/organizations"
 WORKSPACES = "/api/v1/workspaces"
 PASSWORD = "correct horse battery"
+ORDERS_CSV = (Path(__file__).parents[1] / "fixtures" / "reconciliation" / "orders.csv").read_bytes()
 
 
 def _unique(prefix: str) -> str:
@@ -197,6 +199,51 @@ def test_workspace_update_and_delete_by_reviewer():
     assert updated.json()["timestamp_tolerance_hours"] == 6
     assert deleted.status_code == 204
     assert owner.get(workspace_url).status_code == 404
+
+
+def test_workspace_delete_refused_when_imports_exist():
+    owner, _ = _signed_in_client()
+    org = _create_org(owner)
+    workspace = _create_workspace(owner, org["id"])
+    workspace_url = f"{WORKSPACES}/{workspace['id']}"
+
+    # Import some data
+    owner.post(
+        f"{workspace_url}/imports",
+        data={"source_name": "orders"},
+        files={"file": ("orders.csv", ORDERS_CSV, "text/csv")},
+        headers=_csrf(owner),
+    )
+
+    # Try to delete - should be refused
+    deleted = owner.delete(workspace_url, headers=_csrf(owner))
+    assert deleted.status_code == 409
+    assert "holds imported data" in deleted.json()["detail"]
+    # Workspace should still exist
+    assert owner.get(workspace_url).status_code == 200
+
+
+def test_workspace_delete_refused_when_runs_exist():
+    owner, _ = _signed_in_client()
+    org = _create_org(owner)
+    workspace = _create_workspace(owner, org["id"])
+    workspace_url = f"{WORKSPACES}/{workspace['id']}"
+
+    # Import data and run reconciliation
+    owner.post(
+        f"{workspace_url}/imports",
+        data={"source_name": "orders"},
+        files={"file": ("orders.csv", ORDERS_CSV, "text/csv")},
+        headers=_csrf(owner),
+    )
+    owner.post(f"{workspace_url}/reconciliation-runs", headers=_csrf(owner))
+
+    # Try to delete - should be refused
+    deleted = owner.delete(workspace_url, headers=_csrf(owner))
+    assert deleted.status_code == 409
+    assert "holds imported data" in deleted.json()["detail"]
+    # Workspace should still exist
+    assert owner.get(workspace_url).status_code == 200
 
 
 def test_tolerance_must_be_positive():

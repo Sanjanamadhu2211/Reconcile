@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from app.logging import add_request_logging, configure_logging
 from app.routers import (
     auth,
+    exports,
     google_auth,
     health,
     imports,
@@ -25,6 +26,7 @@ def create_app() -> FastAPI:
     app.include_router(imports.router)
     app.include_router(reconciliation_results.router)
     app.include_router(reconciliation_runs.router)
+    app.include_router(exports.router)
     return app
 
 

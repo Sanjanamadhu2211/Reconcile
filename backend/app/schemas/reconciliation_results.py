@@ -65,18 +65,3 @@ class ExceptionItem(BaseModel):
     transaction: ExceptionTransactionSummary | None = None
     import_row: ExceptionImportRowSummary | None = None
     reconciliation_run_id: uuid.UUID
-
-
-class ReconciliationRunDetail(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: uuid.UUID
-    status: str
-    rule_version: str
-    tolerance_hours: int
-    matches_count: int
-    exceptions_count: int
-    error_summary: str | None
-    started_at: datetime | None
-    completed_at: datetime | None
-    created_at: datetime

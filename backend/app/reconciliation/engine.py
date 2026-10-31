@@ -174,10 +174,9 @@ def _match_pairing(
     # rule 2: amount, currency and time tolerance
     # Consider only left records not yet matched/ambiguous/amount_mismatch
     # and right records not yet matched/ambiguous/amount_mismatch
+    rule1_matched = {m.left_key for m in matches}
     left_unmatched = [
-        r
-        for r in left_nondup
-        if r.key not in {m.left_key for m in matches} and r.key not in left_exceptions
+        r for r in left_nondup if r.key not in rule1_matched and r.key not in left_exceptions
     ]
     right_available = {
         r.key: r
@@ -287,8 +286,9 @@ def _match_pairing(
                     right_matched.add(rkey)
 
     # Any left records not processed (no right candidates at all for their amt_cur)
+    matched_left = {m.left_key for m in matches}
     for left in left_unmatched:
-        if left.key not in {m.left_key for m in matches} and left.key not in left_exceptions:
+        if left.key not in matched_left and left.key not in left_exceptions:
             left_exceptions[left.key].append(ExceptionItem("unmatched", left.key))
 
     return matches, left_exceptions, right_exceptions

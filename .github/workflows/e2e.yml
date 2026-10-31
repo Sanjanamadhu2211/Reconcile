@@ -1,0 +1,69 @@
+name: End-to-end
+
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - "frontend/**"
+      - "backend/**"
+      - ".github/workflows/e2e.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: reconcile_e2e
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    env:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/reconcile_e2e
+      SESSION_SECRET: e2e-dummy-secret
+      BACKEND_URL: http://localhost:8000
+      DEMO_EMAIL: e2e@example.com
+      DEMO_PASSWORD: e2e-dummy-password
+      E2E_EMAIL: e2e@example.com
+      E2E_PASSWORD: e2e-dummy-password
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+      - run: pip install -e .
+        working-directory: backend
+      - run: python -m alembic upgrade head
+        working-directory: backend
+      - run: python scripts/seed_demo.py
+        working-directory: backend
+      - run: nohup python -m uvicorn app.main:app --port 8000 > backend.log 2>&1 &
+        working-directory: backend
+      - run: curl -sf --retry 15 --retry-connrefused --retry-delay 2 http://localhost:8000/health
+      - run: bun install --frozen-lockfile
+        working-directory: frontend
+      - run: bun run build
+        working-directory: frontend
+      - run: bunx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: bunx playwright test
+        working-directory: frontend

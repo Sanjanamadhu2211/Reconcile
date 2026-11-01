@@ -1,28 +1,26 @@
 .dashboard {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0 2rem;
 }
-
 .wide {
   grid-column: 1 / -1;
 }
-
 .panel {
   min-width: 0;
-  padding: 1.25rem 1.5rem;
+  padding: 1.25rem;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.8rem;
   background: var(--surface);
+  box-shadow: 0 1px 2px rgb(18 45 34 / 3%);
 }
-
 .panel h2 {
+  margin: 0 0 1rem;
   font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
+  font-weight: 670;
+  letter-spacing: -0.02em;
 }
-
 .panelHeader {
   display: flex;
   align-items: center;
@@ -30,123 +28,122 @@
   gap: 1rem;
   flex-wrap: wrap;
 }
-
 .muted {
   color: var(--muted);
+  line-height: 1.5;
 }
-
 .steps {
   padding-left: 1.25rem;
-  line-height: 1.6;
+  line-height: 1.7;
 }
-
+.steps li + li {
+  margin-top: 0.35rem;
+}
 .stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
-  gap: 0.75rem;
+  gap: 1rem;
 }
-
 .stat {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.3rem;
+  min-width: 0;
 }
-
 .stat dt {
-  font-size: 0.75rem;
   color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 650;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.065em;
 }
-
 .stat dd {
-  font-size: 1.5rem;
+  margin: 0;
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
   font-weight: 700;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
-
 .rate {
-  margin-top: 1.25rem;
+  margin: 1.25rem 0 0;
   color: var(--muted);
 }
-
 .rate strong {
   color: var(--foreground);
-  font-size: 1.25rem;
+  font-size: 1.2rem;
 }
-
 .bar {
-  height: 0.75rem;
-  margin-top: 0.5rem;
-  border-radius: 9999px;
-  background: var(--border);
+  height: 0.55rem;
+  margin-top: 0.6rem;
   overflow: hidden;
+  border-radius: 999px;
+  background: #e8efeb;
 }
-
 .barFill {
   height: 100%;
-  border-radius: 9999px;
+  border-radius: inherit;
   background: var(--accent);
 }
-
 .tableScroll {
   overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
 }
-
 .groups {
   display: grid;
   gap: 1.25rem;
 }
-
 .groupTitle {
-  font-size: 0.8rem;
-  font-weight: 600;
+  margin: 0 0 0.55rem;
   color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.5rem;
+  letter-spacing: 0.065em;
 }
-
 .tiles {
-  list-style: none;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: 0.75rem;
+  gap: 0.65rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
 }
-
 .tile {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.75rem 1rem;
+  min-height: 3.25rem;
+  padding: 0.7rem 0.85rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--background);
+  border-radius: 0.6rem;
   color: var(--foreground);
+  background: #fbfcfb;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
-
 .tile:hover {
-  border-color: var(--accent);
+  border-color: #92b9a8;
+  background: var(--soft-accent);
 }
-
 .tile:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 3px solid #72b9a2;
   outline-offset: 2px;
 }
-
 .tile strong {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
 }
-
 .skeleton {
   min-height: 8rem;
-  border-radius: 8px;
-  background: linear-gradient(90deg, var(--surface), var(--border), var(--surface));
+  border-radius: 0.8rem;
+  background: linear-gradient(90deg, #f1f5f2, #e4ebe6, #f1f5f2);
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
 }
-
 @keyframes shimmer {
   from {
     background-position: 100% 0;
@@ -155,9 +152,23 @@
     background-position: -100% 0;
   }
 }
-
+@media (max-width: 680px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  .wide {
+    grid-column: auto;
+  }
+  .panel {
+    padding: 1rem;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .skeleton {
     animation: none;
+  }
+  .tile {
+    transition: none;
   }
 }

@@ -9,7 +9,7 @@ const approver = {
   password: "approver-password-1",
 };
 const ordersCsv = [
-  "external_id,amount,currency,occurred_at",
+  "order_id,amount,currency,order_date",
   "E2E-ORD-1,10.00,USD,2026-01-05T10:00:00Z",
   "E2E-ORD-2,20.00,USD,2026-01-05T11:00:00Z",
   "",

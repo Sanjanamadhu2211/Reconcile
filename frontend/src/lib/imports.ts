@@ -11,11 +11,11 @@ export type SourceName = "orders" | "payments" | "refunds" | "settlements" | "fe
 export const SOURCE_NAMES: SourceName[] = ["orders", "payments", "refunds", "settlements", "fees"];
 
 export const REQUIRED_HEADERS: Record<SourceName, string[]> = {
-  orders: ["external_id", "amount", "currency", "occurred_at"],
-  payments: ["external_id", "amount", "currency", "occurred_at"],
-  refunds: ["external_id", "amount", "currency", "occurred_at", "original_external_id"],
-  settlements: ["external_id", "amount", "currency", "occurred_at"],
-  fees: ["external_id", "amount", "currency", "occurred_at"],
+  orders: ["order_id", "amount", "currency", "order_date"],
+  payments: ["payment_id", "amount", "currency", "paid_at"],
+  refunds: ["refund_id", "amount", "currency", "refunded_at"],
+  settlements: ["settlement_id", "amount", "currency", "settled_at"],
+  fees: ["fee_id", "amount", "currency", "charged_at"],
 };
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024;

@@ -98,5 +98,7 @@
 }
 
 @media (max-width: 480px) {
-  .page { padding: 2rem 1.25rem; }
+  .page {
+    padding: 2rem 1.25rem;
+  }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { fetchCurrentUser, logout, type User } from "@/lib/auth";
 import { errorText } from "@/lib/errors";
@@ -10,6 +11,7 @@ interface AppShellProps {
 }
 
 export default function AppShell({ children }: AppShellProps) {
+  const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,10 +56,18 @@ export default function AppShell({ children }: AppShellProps) {
             Reconcile
           </Link>
           <nav className="app-nav" aria-label="Main navigation">
-            <Link href="/workspaces" className="nav-link">
+            <Link
+              href="/workspaces"
+              className="nav-link"
+              aria-current={pathname.startsWith("/workspaces") ? "page" : undefined}
+            >
               Workspaces
             </Link>
-            <Link href="/audit" className="nav-link">
+            <Link
+              href="/audit"
+              className="nav-link"
+              aria-current={pathname === "/audit" ? "page" : undefined}
+            >
               Audit
             </Link>
           </nav>

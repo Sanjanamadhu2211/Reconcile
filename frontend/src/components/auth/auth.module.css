@@ -1,8 +1,12 @@
 .page {
   width: 100%;
-  max-width: 26rem;
+  max-width: 29rem;
   margin: 0 auto;
-  padding: 4rem 1.25rem;
+  padding: 3rem 2.25rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+  box-shadow: 0 12px 36px rgb(18 45 34 / 6%);
 }
 
 .page h1 {
@@ -28,7 +32,7 @@
   border-radius: 6px;
   font: inherit;
   color: var(--foreground);
-  background: var(--background);
+  background: #fff;
 }
 
 .form button,
@@ -41,6 +45,11 @@
   cursor: pointer;
   color: var(--accent-foreground);
   background: var(--accent);
+}
+
+.form button:hover:not(:disabled),
+.buttonLink:hover {
+  background: #105843;
 }
 
 .form button {
@@ -83,6 +92,11 @@
 }
 
 .switch a {
-  color: var(--foreground);
+  color: var(--accent);
   text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  .page { padding: 2rem 1.25rem; }
 }

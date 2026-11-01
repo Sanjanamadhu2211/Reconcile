@@ -2,11 +2,11 @@
   width: 100%;
   max-width: 29rem;
   margin: 0 auto;
-  padding: 3rem 2.25rem;
-  border: 1px solid var(--border);
-  border-radius: 1rem;
+  padding: 2.75rem 2.25rem;
+  border-top: 2px solid var(--accent);
+  border-radius: 0.25rem;
   background: var(--surface);
-  box-shadow: 0 12px 36px rgb(18 45 34 / 6%);
+  box-shadow: 0 18px 48px rgb(32 45 39 / 5%);
 }
 
 .page h1 {
@@ -39,7 +39,7 @@
 .buttonLink {
   padding: 0.65rem 1rem;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 999px;
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -71,7 +71,7 @@
 
 .form button:not(:disabled):hover,
 .buttonLink:hover {
-  opacity: 0.85;
+  opacity: 0.95;
 }
 
 .buttonLink {
@@ -95,6 +95,11 @@
   color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.switch a:hover {
+  color: var(--accent);
+  text-decoration-thickness: 2px;
 }
 
 @media (max-width: 480px) {

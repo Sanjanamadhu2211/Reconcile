@@ -50,7 +50,7 @@ def read_header(stream: BinaryIO) -> list[str]:
     stream.seek(0)
     text_stream = io.TextIOWrapper(stream, encoding="utf-8-sig", newline="")
     try:
-        return _find_header(csv.reader(text_stream))[1]
+        return _find_header(csv.reader(text_stream, strict=True))[1]
     except UnicodeDecodeError as e:
         raise ImportFileError("ENCODING_ERROR") from e
     except csv.Error as e:
@@ -91,7 +91,7 @@ def read_rows(
     except UnicodeDecodeError as e:
         raise ImportFileError("ENCODING_ERROR") from e
 
-    reader = csv.reader(text_stream)
+    reader = csv.reader(text_stream, strict=True)
 
     # Read header row (first non-empty row)
     try:

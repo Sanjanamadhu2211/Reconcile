@@ -20,7 +20,7 @@ def test_unterminated_quoted_data_is_rejected():
 
 def test_quoted_multiline_value_is_accepted():
     data = (
-        b'order_id,amount,currency,order_date,customer_id\n'
+        b"order_id,amount,currency,order_date,customer_id\n"
         b'1,10,USD,2024-01-01,"line one\nline two"\n'
     )
     rows = list(read_rows(io.BytesIO(data), "orders", max_rows=10))

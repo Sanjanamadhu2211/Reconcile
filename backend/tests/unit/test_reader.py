@@ -4,7 +4,28 @@ import io
 
 import pytest
 
-from app.imports.reader import ImportFileError, RowResult, read_rows
+from app.imports.reader import ImportFileError, RowResult, read_header, read_rows
+
+
+def test_unterminated_quoted_header_is_rejected():
+    with pytest.raises(ImportFileError, match="MALFORMED_CSV"):
+        read_header(io.BytesIO(b'order_id,amount,currency,"order_date'))
+
+
+def test_unterminated_quoted_data_is_rejected():
+    data = b'order_id,amount,currency,order_date,customer_id\n1,10,USD,2024-01-01,"customer'
+    with pytest.raises(ImportFileError, match="MALFORMED_CSV"):
+        list(read_rows(io.BytesIO(data), "orders", max_rows=10))
+
+
+def test_quoted_multiline_value_is_accepted():
+    data = (
+        b"order_id,amount,currency,order_date,customer_id\n"
+        b'1,10,USD,2024-01-01,"line one\nline two"\n'
+    )
+    rows = list(read_rows(io.BytesIO(data), "orders", max_rows=10))
+    assert rows[0].status == "VALID"
+    assert rows[0].values["reference"] == "line one\nline two"
 
 
 class TestReadRows:

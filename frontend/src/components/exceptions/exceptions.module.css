@@ -95,7 +95,7 @@
   min-width: 9rem;
 }
 .field label {
-  color: #344740;
+  color: var(--foreground);
   font-size: 0.8rem;
   font-weight: 650;
 }
@@ -105,11 +105,11 @@
   width: 100%;
   min-height: 2.65rem;
   padding: 0.55rem 0.7rem;
-  border: 1px solid #cbd7d0;
+  border: 1px solid var(--border);
   border-radius: 0.4rem;
   font: inherit;
   color: var(--foreground);
-  background: white;
+  background: var(--surface);
 }
 .field textarea {
   min-height: 5rem;
@@ -128,7 +128,7 @@
   text-underline-offset: 3px;
 }
 .link:hover {
-  color: #104e3d;
+  color: var(--accent);
 }
 .button {
   display: inline-flex;
@@ -141,7 +141,7 @@
   font: inherit;
   font-weight: 620;
   color: var(--foreground);
-  background: white;
+  background: var(--surface);
   cursor: pointer;
   transition:
     background 0.15s,
@@ -149,7 +149,7 @@
 }
 .button:hover:not(:disabled) {
   border-color: #b6c9bf;
-  background: #f5faf7;
+  background: var(--soft-accent);
 }
 .button:focus-visible,
 .link:focus-visible,
@@ -177,12 +177,12 @@
 .table td {
   padding: 0.78rem 0.85rem;
   text-align: left;
-  border-bottom: 1px solid #eeece4;
+  border-bottom: 1px solid var(--border);
   vertical-align: top;
 }
 .table th {
-  color: #69736b;
-  background: #f8f6ef;
+  color: var(--muted);
+  background: var(--surface-muted);
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: none;
@@ -190,7 +190,7 @@
   white-space: nowrap;
 }
 .table tbody tr:hover {
-  background: #f8f7f1;
+  background: var(--surface-muted);
 }
 .table tbody tr:last-child td {
   border-bottom: 0;
@@ -246,7 +246,7 @@
 }
 .timeline li {
   padding: 0.1rem 0 0.1rem 0.9rem;
-  border-left: 2px solid #cfe0d7;
+  border-left: 2px solid var(--border);
 }
 .timelineHeader {
   display: flex;
